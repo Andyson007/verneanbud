@@ -7,3 +7,5 @@ edition = "2021"
 color-eyre = "0.6.3"
 crossterm = "0.28.1"
 ratatui = "0.28.1"
+futures = "0.3.30"
+sea-orm = { version = "1.0.1", features = ["sqlx-postgres", "runtime-async-std-rustls", "macros"] }

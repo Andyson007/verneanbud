@@ -1,5 +1,3 @@
-//! Crate to manage something. Haven't decided yet
-
 use std::io;
 use verneanbud::{app::App, errors, ui::ui};
 
@@ -24,7 +22,7 @@ fn main() -> color_eyre::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // create app and run it
-    let mut app = App::default();
+    let mut app = App::new()?;
     let res = run_app(&mut terminal, &mut app);
 
     // restore terminal
