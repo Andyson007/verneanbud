@@ -1,13 +1,20 @@
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     widgets::{Block, BorderType, Borders, Clear, Paragraph},
     Frame,
 };
+use sea_orm::{ActiveValue, ConnectOptions, Database, EntityTrait};
 
-use crate::{popups::Popup, style::Style};
+use crate::{
+    entities::{idea, prelude::Idea, sea_orm_active_enums::Issuekind},
+    popups::Popup,
+    style::Style,
+};
 
-#[derive(Default)]
+use super::Action;
+
+#[derive(Default, Clone)]
 pub struct IdeaPopup {
     pub(crate) author: String,
     pub(crate) title: String,
@@ -68,32 +75,64 @@ impl Popup for IdeaPopup {
         frame.render_widget(para, layout[2]);
     }
 
-    fn handle_input(&mut self, key: crossterm::event::KeyCode) -> bool {
+    fn handle_input(&mut self, key: crossterm::event::KeyEvent) -> Action {
         match key {
-            KeyCode::Esc => return true,
-            KeyCode::Tab => self.selected = self.selected.next(),
-            KeyCode::BackTab => self.selected = self.selected.prev(),
-            KeyCode::Backspace => {
-                match self.selected {
-                    Selected::Author => self.author.pop(),
-                    Selected::Title => self.title.pop(),
-                    Selected::Description => self.description.pop(),
-                };
+            KeyEvent {
+                code: KeyCode::Char('w'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            } => {
+                *self.get_str_handle() = self
+                    .get_str_handle()
+                    .rsplit_once(' ')
+                    .map_or(String::new(), |x| x.0.to_string())
             }
-            KeyCode::Char(c) => {
-                match self.selected {
-                    Selected::Author => self.author.push(c),
-                    Selected::Title => self.title.push(c),
-                    Selected::Description => self.description.push(c),
-                };
-            }
-            _ => (),
+            x => match x.code {
+                KeyCode::Esc => return Action::Close,
+                KeyCode::Tab => self.selected = self.selected.next(),
+                KeyCode::BackTab => self.selected = self.selected.prev(),
+                KeyCode::Backspace => drop(self.get_str_handle().pop()),
+                KeyCode::Char(c) => self.get_str_handle().push(c),
+                KeyCode::Enter if matches!(self.selected, Selected::Title) => {
+                    let kind = Issuekind::Issue;
+                    let cloned = self.clone();
+                    return Action::Db(Box::new(|conn_opts: ConnectOptions| {
+                        Box::pin(async move {
+                            let to_insert = idea::ActiveModel {
+                                title: ActiveValue::Set(cloned.title.clone()),
+                                description: ActiveValue::Set(cloned.description.clone()),
+                                author: ActiveValue::Set(cloned.author.clone()),
+                                solved: ActiveValue::Set(false),
+                                kind: ActiveValue::Set(kind),
+                                ..Default::default()
+                            };
+
+                            let db = Database::connect(conn_opts).await?;
+
+                            Idea::insert(to_insert).exec(&db).await?;
+
+                            Ok(())
+                        })
+                    }));
+                }
+                _ => (),
+            },
         }
-        false
+        Action::Nothing
     }
 }
 
-#[derive(Default, Debug)]
+impl IdeaPopup {
+    fn get_str_handle(&mut self) -> &mut String {
+        match self.selected {
+            Selected::Author => &mut self.author,
+            Selected::Title => &mut self.title,
+            Selected::Description => &mut self.description,
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone)]
 enum Selected {
     #[default]
     Author,

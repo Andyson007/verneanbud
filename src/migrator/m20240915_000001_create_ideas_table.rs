@@ -52,8 +52,10 @@ enum Idea {
 }
 
 #[derive(EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "i32", db_type = "Integer")]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "issuekind")]
 enum Kind {
-    Issue = 0,
-    Improvement = 1,
+    #[sea_orm(string_value = "Issue")]
+    Issue,
+    #[sea_orm(string_value = "Improvement")]
+    Improvement,
 }

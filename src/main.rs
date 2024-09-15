@@ -54,7 +54,7 @@ where
                 // Skip events that are not KeyEventKind::Press
                 continue;
             }
-            if app.handle_input(key.code) {
+            if app.handle_input(key) {
                 return Ok(());
             };
         }
