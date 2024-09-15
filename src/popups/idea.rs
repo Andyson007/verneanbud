@@ -1,7 +1,7 @@
 use crossterm::event::KeyCode;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, Paragraph},
     Frame,
 };
 
@@ -21,6 +21,7 @@ impl Popup for IdeaPopup {
     }
 
     fn render(&self, style: Style, area: ratatui::prelude::Rect, frame: &mut Frame) {
+        frame.render_widget(Clear, area);
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -63,15 +64,29 @@ impl Popup for IdeaPopup {
                 style.not_highlighted
             })
             .title("Description");
-        let para = Paragraph::new(self.title.clone()).block(block);
+        let para = Paragraph::new(self.description.clone()).block(block);
         frame.render_widget(para, layout[2]);
     }
 
-    fn handle_input(&mut self, view: &crate::app::View, key: crossterm::event::KeyCode) -> bool {
+    fn handle_input(&mut self, key: crossterm::event::KeyCode) -> bool {
         match key {
-            KeyCode::Char('q') => return true,
+            KeyCode::Esc => return true,
             KeyCode::Tab => self.selected = self.selected.next(),
             KeyCode::BackTab => self.selected = self.selected.prev(),
+            KeyCode::Backspace => {
+                match self.selected {
+                    Selected::Author => self.author.pop(),
+                    Selected::Title => self.title.pop(),
+                    Selected::Description => self.description.pop(),
+                };
+            }
+            KeyCode::Char(c) => {
+                match self.selected {
+                    Selected::Author => self.author.push(c),
+                    Selected::Title => self.title.push(c),
+                    Selected::Description => self.description.push(c),
+                };
+            }
             _ => (),
         }
         false

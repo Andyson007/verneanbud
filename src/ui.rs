@@ -17,7 +17,7 @@ use crate::app::App;
 /// terminal being in raw mode etc.
 pub fn ui(frame: &mut Frame, app: &App) {
     let mut list_state = ListState::with_selected(ListState::default(), Some(1));
-    let list = List::new((0..100).map(|_| "a"))
+    let list = List::new((0..100).map(|_| "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
         .block(Block::bordered().title("List").style(Color::White))
         .scroll_padding(3)
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED));

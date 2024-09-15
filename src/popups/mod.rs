@@ -9,7 +9,7 @@ pub mod idea;
 pub trait Popup {
     fn debug_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
     fn render(&self, style: Style, area: Rect, buffer: &mut Frame);
-    fn handle_input(&mut self, view: &View, key: KeyCode) -> bool;
+    fn handle_input(&mut self, key: KeyCode) -> bool;
 }
 
 impl Debug for dyn Popup {

@@ -40,15 +40,15 @@ impl App {
 
     /// Handles an input
     pub fn handle_input(&mut self, key: KeyCode) -> bool {
-        if matches!(key, KeyCode::Esc) {
-            return true;
-        }
-
         if let Some(popup) = &mut self.popup {
-            if popup.handle_input(&self.view, key) {
+            if popup.handle_input(key) {
                 self.popup = None;
             };
             return false;
+        }
+
+        if matches!(key, KeyCode::Esc | KeyCode::Char('q')) {
+            return true;
         }
 
         match self.view {
