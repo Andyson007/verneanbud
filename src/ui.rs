@@ -4,7 +4,7 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    widgets::{Block, Borders, List, ListState},
+    widgets::{Block, List, ListState},
     Frame,
 };
 
@@ -16,10 +16,6 @@ use crate::app::App;
 /// It probably assumes a lot about the
 /// terminal being in raw mode etc.
 pub fn ui(frame: &mut Frame, app: &App) {
-    let title_block = Block::default()
-        .borders(Borders::ALL)
-        .style(Style::default());
-
     let mut list_state = ListState::with_selected(ListState::default(), Some(1));
     let list = List::new((0..100).map(|_| "a"))
         .block(Block::bordered().title("List").style(Color::White))
@@ -27,6 +23,11 @@ pub fn ui(frame: &mut Frame, app: &App) {
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
 
     frame.render_stateful_widget(list, frame.area(), &mut list_state);
+
+    if let Some(x) = &app.popup {
+        let area = centered_rect(70, 80, frame.area());
+        x.render(app.style, area, frame);
+    }
 }
 
 /// This code is absolutely stolen from the ratatui json example

@@ -10,6 +10,7 @@ pub struct Model {
     pub title: String,
     pub description: String,
     pub author: String,
+    pub solved: bool,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
