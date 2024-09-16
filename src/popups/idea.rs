@@ -2,7 +2,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, BorderType, Borders, Clear, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 use sea_orm::{ActiveValue, ConnectOptions, Database, EntityTrait};
@@ -46,7 +46,9 @@ impl Popup for IdeaPopup {
                 style.not_highlighted
             })
             .title("Author");
-        let para = Paragraph::new(self.author.clone()).block(block);
+        let para = Paragraph::new(self.author.clone())
+            .block(block)
+            .wrap(Wrap { trim: false });
         frame.render_widget(para, layout[0]);
 
         let block = base_block
@@ -57,7 +59,9 @@ impl Popup for IdeaPopup {
                 style.not_highlighted
             })
             .title("Title");
-        let para = Paragraph::new(self.title.clone()).block(block);
+        let para = Paragraph::new(self.title.clone())
+            .block(block)
+            .wrap(Wrap { trim: false });
         frame.render_widget(para, layout[1]);
 
         let block = base_block
@@ -68,7 +72,9 @@ impl Popup for IdeaPopup {
                 style.not_highlighted
             })
             .title("Description");
-        let para = Paragraph::new(self.description.clone()).block(block);
+        let para = Paragraph::new(self.description.clone())
+            .block(block)
+            .wrap(Wrap { trim: false });
         frame.render_widget(para, layout[2]);
     }
 
