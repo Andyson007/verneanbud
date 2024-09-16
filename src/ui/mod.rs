@@ -3,27 +3,23 @@
 
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
-    widgets::{Block, List, ListState},
+    prelude::*,
     Frame,
 };
 
-use ratatui::prelude::*;
-
 use crate::app::App;
+
+mod idea;
 
 /// Draws the ui.
 /// It probably assumes a lot about the
 /// terminal being in raw mode etc.
 pub fn ui(frame: &mut Frame, app: &App) {
-    let mut list_state = ListState::with_selected(ListState::default(), Some(1));
-    let list = List::new((0..100).map(|_| "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
-        .block(Block::bordered().title("List").style(Color::White))
-        .scroll_padding(3)
-        .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
-
-    frame.render_stateful_widget(list, frame.area(), &mut list_state);
-
+    let main_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(Constraint::from_percentages([40, 60]))
+        .split(frame.area());
+    idea::render(app, frame, main_layout[0], main_layout[1]);
     if let Some(x) = &app.popup {
         let area = centered_rect(70, 80, frame.area());
         x.render(app.style, area, frame);

@@ -2,6 +2,7 @@
 //!
 //! This is a simple app used for storing ideas in an easily accessible way
 use std::io;
+use futures::executor::block_on;
 use verneanbud::{app::App, errors, ui::ui};
 
 use crossterm::{
@@ -25,7 +26,7 @@ fn main() -> color_eyre::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     // create app and run it
-    let mut app = App::new()?;
+    let mut app = block_on(App::new())?;
     let res = run_app(&mut terminal, &mut app);
 
     // restore terminal

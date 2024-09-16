@@ -2,13 +2,13 @@
 
 use crossterm::event::{KeyCode, KeyEvent};
 use futures::executor::block_on;
-use sea_orm::ConnectOptions;
-use sea_orm::SqlxError;
-use std::fmt::Debug;
+use sea_orm::{ConnectOptions, DbErr};
 
-use crate::popups::idea::IdeaPopup;
-use crate::popups::{Action, Popup};
-use crate::style::Style;
+use crate::{
+    popups::{idea::IdeaPopup, Action, Popup},
+    style::Style,
+    view_data::ViewData,
+};
 
 const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
 // const DB_NAME: &str = "verneanbud";
@@ -18,6 +18,7 @@ const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
 #[derive(Debug)]
 pub struct App {
     view: View,
+    pub(crate) view_data: ViewData,
     pub(crate) popup: Option<Box<dyn Popup + 'static>>,
     conn_opts: ConnectOptions,
     pub(crate) style: Style,
@@ -28,18 +29,20 @@ impl App {
     /// Creates an app
     ///
     /// Initialized stuff like the db
-    pub fn new() -> Result<Self, SqlxError> {
-        // let db = block_on(async { Database::connect(DATABASE_URL).await })?;
+    pub async fn new() -> Result<Self, DbErr> {
         let mut conn_opts = ConnectOptions::new(DATABASE_URL);
         conn_opts
             .max_connections(100)
             .sqlx_logging(true)
             .sqlx_logging_level(log::LevelFilter::Info);
+
+        let view_data = ViewData::new(&conn_opts).await?;
         Ok(Self {
             view: View::Ideas,
-            conn_opts,
             popup: None,
             style: Style::default(),
+            view_data,
+            conn_opts,
         })
     }
 
@@ -50,8 +53,7 @@ impl App {
                 let popup_action = self.popup.as_mut().unwrap().handle_input(key);
                 let should_close = popup_action.close_popup();
                 if let Action::Db(db_action) = popup_action {
-                    let ans = block_on(db_action(self.conn_opts.clone()));
-                    println!("{ans:?}");
+                    let _ = block_on(db_action(self.conn_opts.clone()));
                 }
                 if !should_close {
                     return false;
@@ -67,6 +69,8 @@ impl App {
 
         match self.view {
             View::Ideas => match key.code {
+                KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.up(),
+                KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
                 KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
                 KeyCode::Char(' ') => {
                     todo!("Toggle state")
