@@ -119,6 +119,7 @@ impl Popup for IdeaPopup {
                         })
                     }));
                 }
+                KeyCode::Enter => self.get_str_handle().push('\n'),
                 _ => (),
             },
         }
