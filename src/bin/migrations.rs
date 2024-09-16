@@ -9,7 +9,7 @@ use crate::migrator::Migrator;
 const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
 
 fn main() {
-    block_on(run());
+    let _ = block_on(run());
 }
 
 async fn run() -> Result<(), DbErr> {

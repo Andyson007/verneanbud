@@ -1,8 +1,8 @@
 use crossterm::event::KeyEvent;
 use futures::Future;
 use ratatui::{layout::Rect, Frame};
-use sea_orm::{ConnectOptions, DatabaseConnection, DbErr};
-use std::{fmt::Debug, pin::Pin, rc::Rc, sync::Mutex};
+use sea_orm::{ConnectOptions, DbErr};
+use std::{fmt::Debug, pin::Pin};
 
 use crate::style::Style;
 
@@ -27,7 +27,8 @@ pub enum Action<'a> {
 }
 
 impl Action<'_> {
-    pub fn close_popup(&self) -> bool {
+    #[must_use]
+    pub const fn close_popup(&self) -> bool {
         !matches!(self, Self::Nothing)
     }
 }

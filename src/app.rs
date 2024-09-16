@@ -46,24 +46,22 @@ impl App {
 
     /// Handles an input
     pub fn handle_input(&mut self, key: KeyEvent) -> bool {
-        if if let Some(popup) = &mut self.popup {
-            let popup_action = popup.handle_input(key);
-            let should_close = popup_action.close_popup();
-            if let Action::Db(db_action) = popup_action {
-                let ans = block_on(db_action(self.conn_opts.clone()));
-                println!("{ans:?}");
+        if self.popup.is_some() {
+            {
+                let popup_action = self.popup.as_mut().unwrap().handle_input(key);
+                let should_close = popup_action.close_popup();
+                if let Action::Db(db_action) = popup_action {
+                    let ans = block_on(db_action(self.conn_opts.clone()));
+                    println!("{ans:?}");
+                }
+                if !should_close {
+                    return false;
+                }
             }
-            if !should_close {
-                return false;
-            }
-            true
-        } else {
-            false
-        } {
+
             self.popup = None;
             return false;
         }
-
         if matches!(key.code, KeyCode::Esc | KeyCode::Char('q')) {
             return true;
         }

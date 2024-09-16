@@ -23,7 +23,7 @@ pub struct IdeaPopup {
 }
 
 impl Popup for IdeaPopup {
-    fn debug_fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn debug_fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         todo!()
     }
 
@@ -85,8 +85,9 @@ impl Popup for IdeaPopup {
                 *self.get_str_handle() = self
                     .get_str_handle()
                     .rsplit_once(' ')
-                    .map_or(String::new(), |x| x.0.to_string())
+                    .map_or(String::new(), |x| x.0.to_string());
             }
+
             x => match x.code {
                 KeyCode::Esc => return Action::Close,
                 KeyCode::Tab => self.selected = self.selected.next(),
@@ -141,7 +142,7 @@ enum Selected {
 }
 
 impl Selected {
-    pub fn next(&self) -> Self {
+    pub const fn next(&self) -> Self {
         match self {
             Self::Author => Self::Title,
             Self::Title => Self::Description,
@@ -149,7 +150,7 @@ impl Selected {
         }
     }
 
-    pub fn prev(&self) -> Self {
+    pub const fn prev(&self) -> Self {
         match self {
             Self::Author => Self::Description,
             Self::Title => Self::Author,
