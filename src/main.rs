@@ -1,3 +1,6 @@
+//! The main entry point
+//!
+//! This is a simple app used for storing ideas in an easily accessible way
 use std::io;
 use verneanbud::{app::App, errors, ui::ui};
 

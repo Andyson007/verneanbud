@@ -1,5 +1,4 @@
-//! The main module.
-//! implements App and all of its features
+//! This module contains everything related to the appstate
 
 use crossterm::event::{KeyCode, KeyEvent};
 use futures::executor::block_on;
@@ -83,6 +82,8 @@ impl App {
 }
 
 #[derive(Debug)]
+/// Descripbes the currently highlighted menu outside of popup
 pub enum View {
+    /// All ideas/suggestions from all the students
     Ideas,
 }

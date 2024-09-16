@@ -1,3 +1,4 @@
+//! The popup that appears when you want to insert a new idea into the db
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -14,8 +15,8 @@ use crate::{
 
 use super::Action;
 
-#[derive(Default, Clone)]
-pub struct IdeaPopup {
+#[derive(Default, Clone, Debug)]
+pub(crate) struct IdeaPopup {
     pub(crate) author: String,
     pub(crate) title: String,
     pub(crate) description: String,
@@ -23,10 +24,6 @@ pub struct IdeaPopup {
 }
 
 impl Popup for IdeaPopup {
-    fn debug_fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
-    }
-
     fn render(&self, style: Style, area: ratatui::prelude::Rect, frame: &mut Frame) {
         frame.render_widget(Clear, area);
         let layout = Layout::default()

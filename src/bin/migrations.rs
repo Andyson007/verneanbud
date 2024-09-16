@@ -1,3 +1,4 @@
+//! This script is used for applying all pending migrations
 use futures::executor::block_on;
 use sea_orm::{Database, DbErr};
 use sea_orm_migration::MigratorTrait;
