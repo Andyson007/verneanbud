@@ -1,8 +1,5 @@
 //! The popup that appears when you want to insert a new idea into the db
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
-};
+use std::rc::Rc;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
@@ -83,7 +80,7 @@ impl Popup for IdeaPopup {
         frame.render_widget(para, layout[2]);
     }
 
-    fn handle_input(&mut self, key: crossterm::event::KeyEvent) -> Action {
+    fn handle_input<'a>(&mut self, key: crossterm::event::KeyEvent) -> Action<'a> {
         match key {
             KeyEvent {
                 code: KeyCode::Char('w'),

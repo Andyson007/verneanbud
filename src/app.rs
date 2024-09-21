@@ -23,7 +23,8 @@ pub struct App<'a> {
     pub(crate) popup: Option<Box<dyn Popup + 'static>>,
     conn_opts: ConnectOptions,
     pub(crate) style: Style,
-    db_actions: Vec<Rc<Pin<Box<dyn Future<Output = Result<(), DbErr>> + 'a>>>>,
+    #[allow(clippy::type_complexity)]
+    db_actions: Vec<Pin<Rc<dyn Future<Output = Result<(), DbErr>> + 'a>>>,
 }
 
 impl std::fmt::Debug for App<'_> {
@@ -65,23 +66,16 @@ impl App<'_> {
     /// Handles an input
     pub fn handle_input(&mut self, key: KeyEvent) -> bool {
         if self.popup.is_some() {
-            let mut to_push: Option<Pin<Rc<dyn Future<Output = Result<(), DbErr>>>>> = None;
             let should_close = {
                 let popup_action = self.popup.as_mut().unwrap().handle_input(key);
                 let should_close = popup_action.close_popup();
                 if let Action::Db(db_action) = popup_action {
-                    let foo = db_action(self.conn_opts.clone());
-                    let foo = Pin::clone(&foo);
-                    // self.db_actions.push(foo);
-                    to_push = Some(foo);
-                    // to_push = Some(Rc::clone(&db_action(self.conn_opts.clone())));
-                    // self.db_actions
-                    //     .push(Rc::clone(&db_action(self.conn_opts.clone())));
+                    let future = db_action(self.conn_opts.clone());
+                    self.db_actions.push(Pin::clone(&future));
                 }
                 should_close
             };
             if should_close {
-
                 self.popup = None;
             }
 

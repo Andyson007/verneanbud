@@ -4,7 +4,7 @@ use crossterm::event::KeyEvent;
 use futures::Future;
 use ratatui::{layout::Rect, Frame};
 use sea_orm::{ConnectOptions, DbErr};
-use std::{cell::Cell, pin::Pin, rc::Rc};
+use std::{pin::Pin, rc::Rc};
 
 use crate::style::Style;
 
@@ -15,7 +15,7 @@ pub trait Popup: fmt::Debug {
     /// Renders te popup onto the frame
     fn render(&self, style: Style, area: Rect, buffer: &mut Frame);
     /// Handles any imput sent to the popup
-    fn handle_input(&mut self, key: KeyEvent) -> Action;
+    fn handle_input<'a>(&mut self, key: KeyEvent) -> Action<'a>;
 }
 
 /// What action should be taken when `handle_input` finishes running
