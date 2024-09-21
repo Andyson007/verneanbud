@@ -1,4 +1,9 @@
 //! The popup that appears when you want to insert a new idea into the db
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -101,7 +106,7 @@ impl Popup for IdeaPopup {
                     let kind = Issuekind::Issue;
                     let cloned = self.clone();
                     return Action::Db(Box::new(|conn_opts: ConnectOptions| {
-                        Box::pin(async move {
+                        Rc::pin(async move {
                             let to_insert = idea::ActiveModel {
                                 title: ActiveValue::Set(cloned.title.clone()),
                                 description: ActiveValue::Set(cloned.description.clone()),
