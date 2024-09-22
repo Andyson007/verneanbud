@@ -15,6 +15,11 @@ impl ViewData {
             idea: Idea::new(conn_opts).await?,
         })
     }
+
+    pub async fn refresh(&mut self, conn_opts: &ConnectOptions) -> Result<(), DbErr> {
+        self.idea = Idea::new(conn_opts).await?;
+        Ok(())
+    }
 }
 
 #[derive(Debug)]

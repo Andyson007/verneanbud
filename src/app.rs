@@ -90,10 +90,11 @@ impl App<'_> {
                 KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.up(),
                 KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
                 KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
+                KeyCode::Char('r') => block_on(self.view_data.refresh(&self.conn_opts)).unwrap(),
                 KeyCode::Char(' ') => {
                     todo!("Toggle state")
                 }
-                KeyCode::Char('r') => {
+                KeyCode::Char('e') => {
                     todo!("Edit something")
                 }
                 _ => (),
