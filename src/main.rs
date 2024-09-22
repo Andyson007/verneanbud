@@ -1,8 +1,8 @@
 //! The main entry point
 //!
 //! This is a simple app used for storing ideas in an easily accessible way
-use std::io;
 use futures::executor::block_on;
+use std::io;
 use verneanbud::{app::App, errors, ui::ui};
 
 use crossterm::{
@@ -46,7 +46,7 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn run_app<B>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()>
+fn run_app<B>(terminal: &mut Terminal<B>, app: &mut App) -> color_eyre::Result<()>
 where
     B: Backend,
 {
@@ -61,6 +61,7 @@ where
             if app.handle_input(key) {
                 return Ok(());
             };
+            block_on(app.run_db_actions())?;
         }
     }
 }

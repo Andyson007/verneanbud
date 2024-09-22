@@ -1,7 +1,6 @@
 //! The popup that appears when you want to insert a new idea into the db
-use std::rc::Rc;
-
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use futures::FutureExt;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
@@ -102,23 +101,23 @@ impl Popup for IdeaPopup {
                 KeyCode::Enter if matches!(self.selected, Selected::Title) => {
                     let kind = Issuekind::Issue;
                     let cloned = self.clone();
-                    return Action::Db(Box::new(|conn_opts: ConnectOptions| {
-                        Rc::pin(async move {
-                            let to_insert = idea::ActiveModel {
-                                title: ActiveValue::Set(cloned.title.clone()),
-                                description: ActiveValue::Set(cloned.description.clone()),
-                                author: ActiveValue::Set(cloned.author.clone()),
-                                solved: ActiveValue::Set(false),
-                                kind: ActiveValue::Set(kind),
-                                ..Default::default()
-                            };
-
+                    return Action::Db(Box::new(move |conn_opts: ConnectOptions| {
+                        let to_insert = idea::ActiveModel {
+                            title: ActiveValue::Set(cloned.title.clone()),
+                            description: ActiveValue::Set(cloned.description.clone()),
+                            author: ActiveValue::Set(cloned.author.clone()),
+                            solved: ActiveValue::Set(false),
+                            kind: ActiveValue::Set(kind),
+                            ..Default::default()
+                        };
+                        async move {
                             let db = Database::connect(conn_opts).await?;
 
                             Idea::insert(to_insert).exec(&db).await?;
 
                             Ok(())
-                        })
+                        }
+                        .boxed()
                     }));
                 }
                 KeyCode::Enter => self.get_str_handle().push('\n'),

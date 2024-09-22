@@ -1,6 +1,6 @@
 //! This module contains everything related to the appstate
 
-use std::{pin::Pin, rc::Rc};
+use std::pin::Pin;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use futures::Future;
@@ -24,7 +24,7 @@ pub struct App<'a> {
     conn_opts: ConnectOptions,
     pub(crate) style: Style,
     #[allow(clippy::type_complexity)]
-    db_actions: Vec<Pin<Rc<dyn Future<Output = Result<(), DbErr>> + 'a>>>,
+    db_actions: Vec<Pin<Box<dyn Future<Output = Result<(), DbErr>> + 'a>>>,
 }
 
 impl std::fmt::Debug for App<'_> {
@@ -71,7 +71,7 @@ impl App<'_> {
                 let should_close = popup_action.close_popup();
                 if let Action::Db(db_action) = popup_action {
                     let future = db_action(self.conn_opts.clone());
-                    self.db_actions.push(Pin::clone(&future));
+                    self.db_actions.push(future);
                 }
                 should_close
             };
@@ -100,6 +100,13 @@ impl App<'_> {
             },
         }
         false
+    }
+
+    pub async fn run_db_actions(&mut self) -> Result<(), DbErr> {
+        while let Some(future) = self.db_actions.pop() {
+            future.await?;
+        }
+        Ok(())
     }
 }
 

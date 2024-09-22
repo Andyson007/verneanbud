@@ -4,7 +4,7 @@ use crossterm::event::KeyEvent;
 use futures::Future;
 use ratatui::{layout::Rect, Frame};
 use sea_orm::{ConnectOptions, DbErr};
-use std::{pin::Pin, rc::Rc};
+use std::pin::Pin;
 
 use crate::style::Style;
 
@@ -26,7 +26,7 @@ pub enum Action<'a> {
     Nothing,
     /// The popup has exited and wants to edit the DB. The popup should be closed
     #[allow(clippy::type_complexity)]
-    Db(Box<dyn FnOnce(ConnectOptions) -> Pin<Rc<dyn Future<Output = Result<(), DbErr>> + 'a>>>),
+    Db(Box<dyn FnOnce(ConnectOptions) -> Pin<Box<dyn Future<Output = Result<(), DbErr>> + 'a>>>),
 }
 
 impl Action<'_> {
