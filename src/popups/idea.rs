@@ -6,7 +6,10 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
-use sea_orm::{ActiveValue, ConnectOptions, Database, EntityTrait};
+use sea_orm::{
+    sqlx::types::chrono,
+    ActiveValue, ConnectOptions, Database, EntityTrait,
+};
 
 use crate::{
     entities::{idea, prelude::Idea, sea_orm_active_enums::Issuekind},
@@ -108,6 +111,7 @@ impl Popup for IdeaPopup {
                             author: ActiveValue::Set(cloned.author.clone()),
                             solved: ActiveValue::Set(false),
                             kind: ActiveValue::Set(kind),
+                            time: ActiveValue::Set(chrono::Local::now().naive_local()),
                             ..Default::default()
                         };
                         async move {
