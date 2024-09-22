@@ -18,7 +18,7 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
         .view_data
         .idea
         .selected
-        .map(|x| &app.view_data.idea.ideas[x])
+        .map(|x| &app.view_data.idea[x])
         .map(|selected_idea| selected_idea.description.clone())
     {
         let widget = Paragraph::new(Text::from(Vec::from([
@@ -50,21 +50,20 @@ fn render_select(app: &App, frame: &mut Frame, view: Rect) {
     let max_title_len = app
         .view_data
         .idea
-        .ideas
         .iter()
         .map(|x| x.title.len())
         .max()
         .unwrap_or(0);
+
     let max_author_len = app
         .view_data
         .idea
-        .ideas
         .iter()
         .map(|x| x.author.len())
         .max()
         .unwrap_or(0);
 
-    let list = List::new(app.view_data.idea.ideas.iter().map(|idea| {
+    let list = List::new(app.view_data.idea.iter().map(|idea| {
         let title = &idea.title;
         let kind = kind_str(&idea.kind).to_string();
         let author = idea.author.clone();

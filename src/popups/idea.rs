@@ -7,8 +7,7 @@ use ratatui::{
     Frame,
 };
 use sea_orm::{
-    sqlx::types::chrono,
-    ActiveValue, ConnectOptions, Database, EntityTrait,
+    sqlx::types::chrono, ActiveValue, ConnectOptions, Database, EntityTrait,
 };
 
 use crate::{
@@ -105,7 +104,7 @@ impl Popup for IdeaPopup {
                     let kind = Issuekind::Issue;
                     let cloned = self.clone();
                     return Action::Db(Box::new(move |conn_opts: ConnectOptions| {
-                        let to_insert = idea::ActiveModel {
+                        let to_insert_active_model = idea::ActiveModel {
                             title: ActiveValue::Set(cloned.title.clone()),
                             description: ActiveValue::Set(cloned.description.clone()),
                             author: ActiveValue::Set(cloned.author.clone()),
@@ -117,7 +116,7 @@ impl Popup for IdeaPopup {
                         async move {
                             let db = Database::connect(conn_opts).await?;
 
-                            Idea::insert(to_insert).exec(&db).await?;
+                            Idea::insert(to_insert_active_model).exec(&db).await?;
 
                             Ok(())
                         }

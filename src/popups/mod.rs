@@ -26,7 +26,13 @@ pub enum Action<'a> {
     Nothing,
     /// The popup has exited and wants to edit the DB. The popup should be closed
     #[allow(clippy::type_complexity)]
-    Db(Box<dyn FnOnce(ConnectOptions) -> Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>>),
+    Db(
+        Box<
+            dyn FnOnce(
+                ConnectOptions,
+            ) -> Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>,
+        >,
+    ),
 }
 
 impl Action<'_> {
