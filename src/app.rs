@@ -3,7 +3,7 @@
 use std::pin::Pin;
 
 use crossterm::event::{KeyCode, KeyEvent};
-use futures::Future;
+use futures::{executor::block_on, Future};
 use sea_orm::{ConnectOptions, DbErr};
 
 use crate::{
@@ -24,7 +24,7 @@ pub struct App<'a> {
     conn_opts: ConnectOptions,
     pub(crate) style: Style,
     #[allow(clippy::type_complexity)]
-    db_actions: Vec<Pin<Box<dyn Future<Output = Result<(), DbErr>> + 'a>>>,
+    db_actions: Vec<Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>>,
 }
 
 impl std::fmt::Debug for App<'_> {
@@ -102,9 +102,11 @@ impl App<'_> {
         false
     }
 
-    pub async fn run_db_actions(&mut self) -> Result<(), DbErr> {
+    /// blocks on completing each of the pending Database actions
+    /// FIXME: This should be possible to be awaited asyncronousely instead
+    pub fn run_db_actions(&mut self) -> Result<(), DbErr> {
         while let Some(future) = self.db_actions.pop() {
-            future.await?;
+            block_on(future)?;
         }
         Ok(())
     }

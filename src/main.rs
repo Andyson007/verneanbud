@@ -61,7 +61,7 @@ where
             if app.handle_input(key) {
                 return Ok(());
             };
-            block_on(app.run_db_actions())?;
+            app.run_db_actions()?;
         }
     }
 }
