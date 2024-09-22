@@ -71,6 +71,7 @@ fn render_select(app: &App, frame: &mut Frame, view: Rect) {
         let time = idea.time.format("%d/%m");
         // format!("{author}: {title:max_title_len$} | {state:10}| {kind}")
         Line::from(Vec::from([
+            Span::styled(format!("{time} "), Style::new().red()),
             Span::raw(kind),
             if idea.solved {
                 Span::styled(" \u{f41d} ", Style::new().magenta())
@@ -79,7 +80,6 @@ fn render_select(app: &App, frame: &mut Frame, view: Rect) {
             },
             Span::styled(format!("{author:>max_author_len$}: "), Style::new().blue()),
             Span::raw(format!("{title:max_title_len$} ")),
-            Span::styled(format!("{time}"), Style::new().red()),
         ]))
     }))
     .block(

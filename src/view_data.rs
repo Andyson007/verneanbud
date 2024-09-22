@@ -1,7 +1,9 @@
-use sea_orm::{ConnectOptions, Database, DbErr, EntityTrait};
+use sea_orm::{ConnectOptions, Database, DbErr, EntityTrait, QueryOrder};
 
 use crate::entities::{idea, prelude::Idea as eIdea};
 
+/// `ViewData` is used to store information that is neccessary for the
+/// UI navigation to function
 #[derive(Debug)]
 pub struct ViewData {
     pub idea: Idea,
@@ -24,7 +26,10 @@ pub struct Idea {
 impl Idea {
     async fn new(conn_opts: &ConnectOptions) -> Result<Self, DbErr> {
         let db = Database::connect(conn_opts.clone()).await?;
-        let ideas = eIdea::find().all(&db).await?;
+        let ideas = eIdea::find()
+            .order_by_desc(idea::Column::Time)
+            .all(&db)
+            .await?;
         Ok(Self {
             selected: None,
             ideas,
