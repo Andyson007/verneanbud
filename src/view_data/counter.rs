@@ -1,12 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Counter {
     counter: usize,
-}
-
-impl Default for Counter {
-   fn default() -> Self {
-        Self { counter: 0 }
-    }
 }
 
 impl Counter {
@@ -15,7 +9,7 @@ impl Counter {
         self.counter - 1
     }
 
-    pub fn get(&self) -> usize {
+    pub const fn get(&self) -> usize {
         self.counter
     }
 }

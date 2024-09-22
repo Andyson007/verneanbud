@@ -80,16 +80,16 @@ impl Idea {
         match self
             .ideas
             .iter_mut()
-            .find(|x| matches!(x, IdeaType::NotInDbYet(id, _)))
+            .find(|x| matches!(x, IdeaType::NotInDbYet(dbid, _) if *dbid == id))
         {
             None => return Err(()),
             Some(x) => x,
         }
-        .to_db();
+        .convert_to_db();
         Ok(())
     }
 
-    pub fn refresh(&mut self, conn_opts: &ConnectOptions) {
+    pub fn refresh(&mut self,  _conn_opts: &ConnectOptions) {
         todo!("This should refresh the Databases inside of here")
     }
 }
@@ -103,7 +103,7 @@ pub enum IdeaType {
 }
 
 impl IdeaType {
-    pub fn get_entry<'a>(&'a self) -> &'a idea::Model {
+    pub fn get_entry(&self) -> &idea::Model {
         match self {
             IdeaType::InDb(ref x) => x,
             IdeaType::NotInDbYet(_, ref x) => x,
@@ -117,7 +117,9 @@ impl IdeaType {
         }
     }
 
-    pub fn to_db(&mut self) {
+    /// Converts self to a database entry. 
+    /// This happens unchecked and the id associated with it will be forgotten
+    pub fn convert_to_db(&mut self) {
         if let Self::NotInDbYet(_, x) = self {
             *self = Self::InDb(x.clone());
         }
