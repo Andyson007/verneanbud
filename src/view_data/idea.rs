@@ -32,7 +32,7 @@ impl Idea {
     pub async fn new(conn_opts: &ConnectOptions, counter: Rc<Counter>) -> Result<Self, DbErr> {
         let db = Database::connect(conn_opts.clone()).await?;
         let ideas = eIdea::find()
-            .order_by_desc(idea::Column::Time)
+            .order_by_asc(idea::Column::Time)
             .all(&db)
             .await?
             .into_iter()
@@ -74,6 +74,19 @@ impl Idea {
         &self,
     ) -> std::iter::Map<std::slice::Iter<IdeaType>, fn(&IdeaType) -> &idea::Model> {
         self.ideas.iter().map(IdeaType::get_entry)
+    }
+
+    pub fn inserted(&mut self, id: usize) -> Result<(), ()> {
+        match self
+            .ideas
+            .iter_mut()
+            .find(|x| matches!(x, IdeaType::NotInDbYet(id, _)))
+        {
+            None => return Err(()),
+            Some(x) => x,
+        }
+        .to_db();
+        Ok(())
     }
 
     pub fn refresh(&mut self, conn_opts: &ConnectOptions) {

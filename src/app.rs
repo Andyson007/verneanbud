@@ -1,6 +1,6 @@
 //! This module contains everything related to the appstate
 
-use std::pin::Pin;
+use std::{collections::HashMap, pin::Pin};
 
 use crossterm::event::{KeyCode, KeyEvent};
 use futures::{executor::block_on, Future};
@@ -24,7 +24,7 @@ pub struct App<'a> {
     conn_opts: ConnectOptions,
     pub(crate) style: Style,
     #[allow(clippy::type_complexity)]
-    db_actions: Vec<Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>>,
+    db_actions: HashMap<usize, Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>>,
 }
 
 impl std::fmt::Debug for App<'_> {
@@ -59,7 +59,7 @@ impl App<'_> {
             style: Style::default(),
             view_data,
             conn_opts,
-            db_actions: Vec::new(),
+            db_actions: HashMap::new(),
         })
     }
 
@@ -70,8 +70,8 @@ impl App<'_> {
                 let popup_action = self.popup.as_mut().unwrap().handle_input(key);
                 let should_close = popup_action.close_popup();
                 if let Action::Db(db_action) = popup_action {
-                    let future = db_action(self.conn_opts.clone());
-                    self.db_actions.push(future);
+                    let (id, future) = db_action(&mut self.view_data, self.conn_opts.clone());
+                    self.db_actions.insert(id, future);
                 }
                 should_close
             };
@@ -106,8 +106,9 @@ impl App<'_> {
     /// blocks on completing each of the pending Database actions
     /// FIXME: This should be possible to be awaited asyncronousely instead
     pub fn run_db_actions(&mut self) -> Result<(), DbErr> {
-        while let Some(future) = self.db_actions.pop() {
+        for (id, future) in self.db_actions.drain() {
             block_on(future)?;
+            self.view_data.idea.inserted(id);
         }
         Ok(())
     }

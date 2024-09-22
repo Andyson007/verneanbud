@@ -6,7 +6,7 @@ use ratatui::{layout::Rect, Frame};
 use sea_orm::{ConnectOptions, DbErr};
 use std::pin::Pin;
 
-use crate::style::Style;
+use crate::{style::Style, view_data::ViewData};
 
 pub mod idea;
 
@@ -29,8 +29,12 @@ pub enum Action<'a> {
     Db(
         Box<
             dyn FnOnce(
+                &mut ViewData,
                 ConnectOptions,
-            ) -> Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>,
+            ) -> (
+                usize,
+                Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>,
+            ),
         >,
     ),
 }

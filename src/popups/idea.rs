@@ -6,14 +6,13 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
-use sea_orm::{
-    sqlx::types::chrono, ActiveValue, ConnectOptions, Database, EntityTrait,
-};
+use sea_orm::{sqlx::types::chrono, ActiveValue, ConnectOptions, Database, EntityTrait};
 
 use crate::{
     entities::{idea, prelude::Idea, sea_orm_active_enums::Issuekind},
     popups::Popup,
     style::Style,
+    view_data::ViewData,
 };
 
 use super::Action;
@@ -103,25 +102,41 @@ impl Popup for IdeaPopup {
                 KeyCode::Enter if matches!(self.selected, Selected::Title) => {
                     let kind = Issuekind::Issue;
                     let cloned = self.clone();
-                    return Action::Db(Box::new(move |conn_opts: ConnectOptions| {
-                        let to_insert_active_model = idea::ActiveModel {
-                            title: ActiveValue::Set(cloned.title.clone()),
-                            description: ActiveValue::Set(cloned.description.clone()),
-                            author: ActiveValue::Set(cloned.author.clone()),
-                            solved: ActiveValue::Set(false),
-                            kind: ActiveValue::Set(kind),
-                            time: ActiveValue::Set(chrono::Local::now().naive_local()),
-                            ..Default::default()
-                        };
-                        async move {
-                            let db = Database::connect(conn_opts).await?;
+                    return Action::Db(Box::new(
+                        move |view_data: &mut ViewData, conn_opts: ConnectOptions| {
+                            let to_insert = idea::Model {
+                                id: 0,
+                                title: cloned.title.clone(),
+                                description: cloned.description.clone(),
+                                author: cloned.author.clone(),
+                                solved: false,
+                                kind,
+                                time: chrono::Local::now().naive_local(),
+                            };
+                            let id = view_data.idea.new_future(to_insert.clone());
 
-                            Idea::insert(to_insert_active_model).exec(&db).await?;
+                            let to_insert_active_model = idea::ActiveModel {
+                                title: ActiveValue::Set(to_insert.title.clone()),
+                                description: ActiveValue::Set(to_insert.description.clone()),
+                                author: ActiveValue::Set(to_insert.author.clone()),
+                                solved: ActiveValue::Set(to_insert.solved),
+                                kind: ActiveValue::Set(to_insert.kind),
+                                time: ActiveValue::Set(to_insert.time),
+                                ..Default::default()
+                            };
+                            (
+                                id,
+                                async move {
+                                    let db = Database::connect(conn_opts).await?;
 
-                            Ok(())
-                        }
-                        .boxed()
-                    }));
+                                    Idea::insert(to_insert_active_model).exec(&db).await?;
+
+                                    Ok(())
+                                }
+                                .boxed(),
+                            )
+                        },
+                    ));
                 }
                 KeyCode::Enter => self.get_str_handle().push('\n'),
                 _ => (),
