@@ -13,6 +13,7 @@ pub struct Model {
     pub author: String,
     pub solved: bool,
     pub kind: Issuekind,
+    pub time: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::app::App;
 
-mod idea;
+mod ideas;
 
 /// Draws the ui.
 /// It probably assumes a lot about the
@@ -19,7 +19,7 @@ pub fn ui(frame: &mut Frame, app: &App) {
         .direction(Direction::Horizontal)
         .constraints(Constraint::from_percentages([40, 60]))
         .split(frame.area());
-    idea::render(app, frame, main_layout[0], main_layout[1]);
+    ideas::render(app, frame, main_layout[0], main_layout[1]);
     if let Some(x) = &app.popup {
         let area = centered_rect(70, 80, frame.area());
         x.render(app.style, area, frame);

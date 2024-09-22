@@ -28,6 +28,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Idea::Author).string().not_null())
                     .col(ColumnDef::new(Idea::Solved).boolean().not_null())
                     .col(ColumnDef::new(Idea::Kind).custom(Kind::name()).not_null())
+                    .col(ColumnDef::new(Idea::Time).timestamp().not_null())
                     .to_owned(),
             )
             .await
@@ -49,6 +50,7 @@ enum Idea {
     Description,
     Solved,
     Kind,
+    Time,
 }
 
 #[derive(EnumIter, DeriveActiveEnum)]
