@@ -14,24 +14,35 @@ pub fn render(app: &App, frame: &mut Frame, mainview: Rect, infoview: Rect) {
 }
 
 fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
-    let raw_text = app
+    if let Some(raw_text) = app
         .view_data
         .idea
         .selected
         .map(|x| &app.view_data.idea.ideas[x])
-        .map_or_else(
-            || "You need to select an element to view it's description.".to_string(),
-            |selected_idea| selected_idea.description.clone(),
-        );
-    let widget = Paragraph::new(Text::from(raw_text))
+        .map(|selected_idea| selected_idea.description.clone())
+    {
+        let widget = Paragraph::new(Text::from(Vec::from([
+            Line::from(Span::raw(raw_text)),
+            Line::from(Span::styled(
+                "\u{2500}".repeat(50),
+                Style::new().fg(Color::Green),
+            )),
+        ])))
         .wrap(Wrap { trim: false })
         .block(
             Block::bordered()
                 .title("Description")
                 .border_type(ratatui::widgets::BorderType::Rounded),
         );
-
-    frame.render_widget(widget, view);
+        frame.render_widget(widget, view);
+    } else {
+        let text = Paragraph::new("Select an entry to view").block(
+            Block::bordered()
+                .title("Description")
+                .border_type(ratatui::widgets::BorderType::Rounded),
+        );
+        frame.render_widget(text, view);
+    }
 }
 
 fn render_select(app: &App, frame: &mut Frame, view: Rect) {
@@ -44,12 +55,31 @@ fn render_select(app: &App, frame: &mut Frame, view: Rect) {
         .map(|x| x.title.len())
         .max()
         .unwrap_or(0);
+    let max_author_len = app
+        .view_data
+        .idea
+        .ideas
+        .iter()
+        .map(|x| x.author.len())
+        .max()
+        .unwrap_or(0);
 
     let list = List::new(app.view_data.idea.ideas.iter().map(|idea| {
         let title = &idea.title;
-        let state = if idea.solved { "solved" } else { "unsolved" };
         let kind = kind_str(&idea.kind).to_string();
-        format!("{title:max_title_len$}ans | {state:10}| {kind}")
+        let author = idea.author.clone();
+
+        // format!("{author}: {title:max_title_len$} | {state:10}| {kind}")
+        Line::from(Vec::from([
+            Span::raw(kind),
+            if idea.solved {
+                Span::styled(" \u{f41d} ", Style::new().magenta())
+            } else {
+                Span::styled(" \u{f41b} ", Style::new().green())
+            },
+            Span::styled(format!("{author:>max_author_len$}: "), Style::new().blue()),
+            Span::raw(format!("{title:max_title_len$}")),
+        ]))
     }))
     .block(
         Block::bordered()
