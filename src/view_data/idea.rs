@@ -1,14 +1,17 @@
 use sea_orm::{ConnectOptions, Database, DbErr};
 use sea_orm::{EntityTrait, QueryOrder};
 use std::ops::{Index, IndexMut};
+use std::rc::Rc;
 
 use crate::entities::{idea, prelude::Idea as eIdea};
+
+use super::counter::Counter;
 
 #[derive(Debug)]
 pub struct Idea {
     pub selected: Option<usize>,
     ideas: Vec<IdeaType>,
-    idea_counter: Counter,
+    counter: Rc<Counter>,
 }
 
 impl Index<usize> for Idea {
@@ -26,7 +29,7 @@ impl IndexMut<usize> for Idea {
 }
 
 impl Idea {
-    pub async fn new(conn_opts: &ConnectOptions) -> Result<Self, DbErr> {
+    pub async fn new(conn_opts: &ConnectOptions, counter: Rc<Counter>) -> Result<Self, DbErr> {
         let db = Database::connect(conn_opts.clone()).await?;
         let ideas = eIdea::find()
             .order_by_desc(idea::Column::Time)
@@ -38,7 +41,7 @@ impl Idea {
         Ok(Self {
             selected: None,
             ideas,
-            idea_counter: Counter::default(),
+            counter,
         })
     }
 
@@ -60,15 +63,21 @@ impl Idea {
     }
 
     pub fn new_future(&mut self, idea: idea::Model) -> usize {
-        self.ideas
-            .push(IdeaType::new_future(&mut self.idea_counter, idea));
-        self.idea_counter.get()
+        let Some(counter) = Rc::get_mut(&mut self.counter) else {
+            panic!("I don't even know how.")
+        };
+        self.ideas.push(IdeaType::new_future(counter, idea));
+        self.counter.get()
     }
 
     pub fn iter(
         &self,
     ) -> std::iter::Map<std::slice::Iter<IdeaType>, fn(&IdeaType) -> &idea::Model> {
         self.ideas.iter().map(IdeaType::get_entry)
+    }
+
+    pub fn refresh(&mut self, conn_opts: &ConnectOptions) {
+        todo!("This should refresh the Databases inside of here")
     }
 }
 
@@ -103,27 +112,5 @@ impl IdeaType {
 
     fn new_future(counter: &mut Counter, idea: idea::Model) -> Self {
         Self::NotInDbYet(counter.next(), idea)
-    }
-}
-
-#[derive(Debug)]
-struct Counter {
-    counter: usize,
-}
-
-impl Default for Counter {
-    fn default() -> Self {
-        Self { counter: 0 }
-    }
-}
-
-impl Counter {
-    fn next(&mut self) -> usize {
-        self.counter += 1;
-        self.counter - 1
-    }
-
-    pub fn get(&self) -> usize {
-        self.counter
     }
 }

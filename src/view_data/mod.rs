@@ -1,7 +1,10 @@
 use sea_orm::{ConnectOptions, DbErr};
+use std::rc::Rc;
 
+mod counter;
 mod idea;
 
+use counter::Counter;
 use idea::Idea;
 // use crate::entities::{idea, prelude::Idea as eIdea};
 
@@ -14,13 +17,14 @@ pub struct ViewData {
 
 impl ViewData {
     pub async fn new(conn_opts: &ConnectOptions) -> Result<Self, DbErr> {
+        let counter = Rc::new(Counter::default());
         Ok(Self {
-            idea: Idea::new(conn_opts).await?,
+            idea: Idea::new(conn_opts, Rc::clone(&counter)).await?,
         })
     }
 
     pub async fn refresh(&mut self, conn_opts: &ConnectOptions) -> Result<(), DbErr> {
-        self.idea = Idea::new(conn_opts).await?;
+        self.idea.refresh(conn_opts);
         Ok(())
     }
 }
