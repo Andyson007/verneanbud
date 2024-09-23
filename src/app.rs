@@ -13,7 +13,8 @@ use crate::{
 };
 
 const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
-// const DB_NAME: &str = "verneanbud";
+
+pub type DbAction<'a> = Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>;
 
 /// The appstruct is responsible for containing all information
 /// describing the current state
@@ -24,7 +25,7 @@ pub struct App<'a> {
     conn_opts: ConnectOptions,
     pub(crate) style: Style,
     #[allow(clippy::type_complexity)]
-    db_actions: HashMap<usize, Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>>,
+    db_actions: HashMap<usize, DbAction<'a>>,
 }
 
 impl std::fmt::Debug for App<'_> {
@@ -91,6 +92,11 @@ impl App<'_> {
                 KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
                 KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
                 KeyCode::Char('r') => block_on(self.view_data.refresh(&self.conn_opts)).unwrap(),
+                KeyCode::Char('d') => 'block:{
+                    let Some(db_action) = self.view_data.idea.delete() else {
+                        break 'block;
+                    };
+                },
                 KeyCode::Char(' ') => {
                     todo!("Toggle state")
                 }

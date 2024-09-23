@@ -6,7 +6,7 @@ use ratatui::{layout::Rect, Frame};
 use sea_orm::{ConnectOptions, DbErr};
 use std::pin::Pin;
 
-use crate::{style::Style, view_data::ViewData};
+use crate::{app::DbAction, style::Style, view_data::ViewData};
 
 pub mod idea;
 
@@ -25,18 +25,7 @@ pub enum Action<'a> {
     /// The popup has handled all inputs has consumed the input
     Nothing,
     /// The popup has exited and wants to edit the DB. The popup should be closed
-    #[allow(clippy::type_complexity)]
-    Db(
-        Box<
-            dyn FnOnce(
-                &mut ViewData,
-                ConnectOptions,
-            ) -> (
-                usize,
-                Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>,
-            ),
-        >,
-    ),
+    Db(Box<dyn FnOnce(&mut ViewData, ConnectOptions) -> (usize, DbAction<'a>)>),
 }
 
 impl Action<'_> {
