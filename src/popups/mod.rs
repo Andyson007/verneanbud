@@ -6,7 +6,11 @@ use ratatui::{layout::Rect, Frame};
 use sea_orm::{ConnectOptions, DbErr};
 use std::pin::Pin;
 
-use crate::{app::DbAction, style::Style, view_data::ViewData};
+use crate::{
+    app::{DbAction, DbActionReturn},
+    style::Style,
+    view_data::ViewData,
+};
 
 pub mod idea;
 
@@ -25,7 +29,7 @@ pub enum Action<'a> {
     /// The popup has handled all inputs has consumed the input
     Nothing,
     /// The popup has exited and wants to edit the DB. The popup should be closed
-    Db(Box<dyn FnOnce(&mut ViewData, ConnectOptions) -> (usize, DbAction<'a>)>),
+    Db(DbActionReturn<'a>),
 }
 
 impl Action<'_> {

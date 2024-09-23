@@ -99,8 +99,15 @@ impl Idea {
 
     pub fn delete<'a>(
         &mut self,
-    ) -> Option<Box<dyn FnOnce(&mut ViewData, ConnectOptions) -> Option<(usize, DbAction<'a>)>>>
-    {
+    ) -> Option<
+        Box<
+            dyn FnOnce(
+                &mut ViewData,
+                ConnectOptions,
+            )
+                -> Option<(usize, (DbAction<'a>, Box<dyn FnOnce(&mut ViewData)>))>,
+        >,
+    > {
         let selected = self.selected?;
 
         let IdeaType::InDb(idea::Model { id, .. }) = self.ideas[selected] else {
@@ -110,21 +117,25 @@ impl Idea {
         Some(Box::new(
             move |view_data: &mut ViewData, conn_opts: ConnectOptions| {
                 let idea = view_data.idea.ideas.iter_mut().find(
-                    |x| matches!(x, IdeaType::InDb(idea::Model {id: model_id, ..}) if id == *model_id),
+                    |x| matches!(x, IdeaType::InDb(idea::Model {id: model_id, ..}) if id == *model_id)
                 )?;
 
                 let action_id = idea.convert_to_db_action()?;
 
                 Some((
                     action_id,
-                    async move {
-                        let db = Database::connect(conn_opts).await?;
+                    (
+                        async move {
+                            let db = Database::connect(conn_opts).await?;
 
-                        eIdea::delete_by_id(id).exec(&db).await?;
+                            eIdea::delete_by_id(id).exec(&db).await?;
 
-                        Ok(())
-                    }
-                    .boxed(),
+                            Ok(())
+                        }
+                        .boxed(),
+                        Box::new(|view_data: &mut ViewData| {
+                        }),
+                    ),
                 ))
             },
         ))

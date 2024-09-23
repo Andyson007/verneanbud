@@ -124,17 +124,22 @@ impl Popup for IdeaPopup {
                                 time: ActiveValue::Set(to_insert.time),
                                 ..Default::default()
                             };
-                            (
+                            Some((
                                 id,
-                                async move {
-                                    let db = Database::connect(conn_opts).await?;
+                                (
+                                    async move {
+                                        let db = Database::connect(conn_opts).await?;
 
-                                    Idea::insert(to_insert_active_model).exec(&db).await?;
+                                        Idea::insert(to_insert_active_model).exec(&db).await?;
 
-                                    Ok(())
-                                }
-                                .boxed(),
-                            )
+                                        Ok(())
+                                    }
+                                    .boxed(),
+                                    Box::new(move |view_data: &mut ViewData| {
+                                        let _ = view_data.idea.inserted(id);
+                                    }),
+                                ),
+                            ))
                         },
                     ));
                 }

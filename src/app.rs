@@ -15,6 +15,10 @@ use crate::{
 const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
 
 pub type DbAction<'a> = Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>;
+pub type DbActionCallback = Box<dyn FnOnce(&mut ViewData)>;
+pub type DbActionReturn<'a> = Box<
+    dyn FnOnce(&mut ViewData, ConnectOptions) -> Option<(usize, (DbAction<'a>, DbActionCallback))>,
+>;
 
 /// The appstruct is responsible for containing all information
 /// describing the current state
@@ -25,7 +29,7 @@ pub struct App<'a> {
     conn_opts: ConnectOptions,
     pub(crate) style: Style,
     #[allow(clippy::type_complexity)]
-    db_actions: HashMap<usize, DbAction<'a>>,
+    db_actions: HashMap<usize, (DbAction<'a>, DbActionCallback)>,
 }
 
 impl std::fmt::Debug for App<'_> {
@@ -70,9 +74,15 @@ impl App<'_> {
             let should_close = {
                 let popup_action = self.popup.as_mut().unwrap().handle_input(key);
                 let should_close = popup_action.close_popup();
-                if let Action::Db(db_action) = popup_action {
-                    let (id, future) = db_action(&mut self.view_data, self.conn_opts.clone());
-                    self.db_actions.insert(id, future);
+                'block: {
+                    if let Action::Db(db_action) = popup_action {
+                        let Some((id, (future, callback))) =
+                            db_action(&mut self.view_data, self.conn_opts.clone())
+                        else {
+                            break 'block;
+                        };
+                        self.db_actions.insert(id, (future, callback));
+                    }
                 }
                 should_close
             };
@@ -92,11 +102,17 @@ impl App<'_> {
                 KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
                 KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
                 KeyCode::Char('r') => block_on(self.view_data.refresh(&self.conn_opts)).unwrap(),
-                KeyCode::Char('d') => 'block:{
+                KeyCode::Char('d') => 'block: {
                     let Some(db_action) = self.view_data.idea.delete() else {
                         break 'block;
                     };
-                },
+                    let Some((id, db_action)) =
+                        db_action(&mut self.view_data, self.conn_opts.clone())
+                    else {
+                        break 'block;
+                    };
+                    self.db_actions.insert(id, db_action);
+                }
                 KeyCode::Char(' ') => {
                     todo!("Toggle state")
                 }
@@ -112,9 +128,8 @@ impl App<'_> {
     /// blocks on completing each of the pending Database actions
     /// FIXME: This should be possible to be awaited asyncronousely instead
     pub fn run_db_actions(&mut self) -> Result<(), DbErr> {
-        for (id, future) in self.db_actions.drain() {
+        for (id, (future, _)) in self.db_actions.drain() {
             block_on(future)?;
-            self.view_data.idea.inserted(id);
         }
         Ok(())
     }
