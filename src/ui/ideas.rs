@@ -21,13 +21,14 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
         .map(|x| &app.view_data.idea[x])
         .map(|selected_idea| selected_idea.description.clone())
     {
-        let widget = Paragraph::new(Text::from(Vec::from([
-            Line::from(Span::raw(raw_text)),
-            Line::from(Span::styled(
-                "\u{2500}".repeat(50),
-                Style::new().fg(Color::Green),
-            )),
-        ])))
+        let widget = Paragraph::new(Text::from(
+            raw_text
+                .lines()
+                .map(Span::raw)
+                .chain([Span::styled("\u{2500}".repeat(50), Style::new().fg(Color::Green))])
+                .map(Line::from)
+                .collect::<Vec<_>>(),
+        ))
         .wrap(Wrap { trim: false })
         .block(
             Block::bordered()
