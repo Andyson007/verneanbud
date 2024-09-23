@@ -18,12 +18,13 @@ impl Index<usize> for Idea {
     type Output = idea::Model;
 
     fn index(&self, idx: usize) -> &Self::Output {
-        self.ideas[idx].get_entry()
+        self.ideas[self.ideas.len() - idx - 1].get_entry()
     }
 }
 
 impl IndexMut<usize> for Idea {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
+        let index = self.ideas.len() - idx - 1;
         self.ideas[index].get_entry_mut()
     }
 }
@@ -89,7 +90,7 @@ impl Idea {
         Ok(())
     }
 
-    pub fn refresh(&mut self,  _conn_opts: &ConnectOptions) {
+    pub fn refresh(&mut self, _conn_opts: &ConnectOptions) {
         todo!("This should refresh the Databases inside of here")
     }
 }
@@ -117,7 +118,7 @@ impl IdeaType {
         }
     }
 
-    /// Converts self to a database entry. 
+    /// Converts self to a database entry.
     /// This happens unchecked and the id associated with it will be forgotten
     pub fn convert_to_db(&mut self) {
         if let Self::NotInDbYet(_, x) = self {
