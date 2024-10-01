@@ -1,10 +1,10 @@
-use futures::FutureExt;
+use futures::{FutureExt, SinkExt};
 use sea_orm::{ConnectOptions, Database, DbErr};
 use sea_orm::{EntityTrait, QueryOrder};
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 
-use crate::app::DbAction;
+use crate::app::{DbAction, DbActionReturn};
 use crate::entities::{idea, prelude::Idea as eIdea};
 
 use super::counter::Counter;
@@ -18,17 +18,17 @@ pub struct Idea {
 }
 
 impl Index<usize> for Idea {
-    type Output = idea::Model;
+    type Output = IdeaType;
 
     fn index(&self, idx: usize) -> &Self::Output {
-        self.ideas[self.ideas.len() - idx - 1].get_entry()
+        &self.ideas[self.ideas.len() - idx - 1]
     }
 }
 
 impl IndexMut<usize> for Idea {
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
         let index = self.ideas.len() - idx - 1;
-        self.ideas[index].get_entry_mut()
+        &mut self.ideas[index]
     }
 }
 
@@ -97,20 +97,10 @@ impl Idea {
         todo!("This should refresh the Databases inside of here")
     }
 
-    pub fn delete<'a>(
-        &mut self,
-    ) -> Option<
-        Box<
-            dyn FnOnce(
-                &mut ViewData,
-                ConnectOptions,
-            )
-                -> Option<(usize, (DbAction<'a>, Box<dyn FnOnce(&mut ViewData)>))>,
-        >,
-    > {
+    pub fn delete<'a>(&mut self) -> Option<DbActionReturn<'a>> {
         let selected = self.selected?;
 
-        let IdeaType::InDb(idea::Model { id, .. }) = self.ideas[selected] else {
+        let IdeaType::InDb(idea::Model { id, .. }) = self[selected] else {
             return None;
         };
 
@@ -133,7 +123,27 @@ impl Idea {
                             Ok(())
                         }
                         .boxed(),
-                        Box::new(|view_data: &mut ViewData| {
+                        Box::new(move |view_data: &mut ViewData| {
+                            let Some(pos) = view_data.idea.ideas.iter_mut().position(
+                                |x| matches!(x, IdeaType::InDb(idea::Model {id: model_id, ..}) if id == *model_id)
+                            ) else {
+                                return;
+                            };
+
+                            if view_data.idea.ideas.len() == 1 {
+                                view_data.idea.selected = None;
+                            }
+
+                            if let Some(ref mut selected) = view_data.idea.selected {
+                                if *selected > pos {
+                                    *selected -= 1;
+                                }
+                                // Just in case so that some weird behavior doesn't crash it
+                                if *selected == view_data.idea.ideas.len() {
+                                    *selected -= 1;
+                                }
+                            }
+                            let _ = view_data.idea.ideas.remove(pos);
                         }),
                     ),
                 ))

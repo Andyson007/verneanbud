@@ -19,13 +19,16 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
         .idea
         .selected
         .map(|x| &app.view_data.idea[x])
-        .map(|selected_idea| selected_idea.description.clone())
+        .map(|selected_idea| selected_idea.get_entry().description.clone())
     {
         let widget = Paragraph::new(Text::from(
             raw_text
                 .lines()
                 .map(Span::raw)
-                .chain([Span::styled("\u{2500}".repeat(50), Style::new().fg(Color::Green))])
+                .chain([Span::styled(
+                    "\u{2500}".repeat(50),
+                    Style::new().fg(Color::Green),
+                )])
                 .map(Line::from)
                 .collect::<Vec<_>>(),
         ))
