@@ -1,16 +1,9 @@
 //! Responsible for storing a concrete popup type
 use core::fmt;
 use crossterm::event::KeyEvent;
-use futures::Future;
 use ratatui::{layout::Rect, Frame};
-use sea_orm::{ConnectOptions, DbErr};
-use std::pin::Pin;
 
-use crate::{
-    app::{DbAction, DbActionReturn},
-    style::Style,
-    view_data::ViewData,
-};
+use crate::{app::DbActionReturn, style::Style};
 
 pub mod idea;
 

@@ -1,10 +1,10 @@
-use futures::{FutureExt, SinkExt};
+use futures::FutureExt;
 use sea_orm::{ConnectOptions, Database, DbErr};
 use sea_orm::{EntityTrait, QueryOrder};
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 
-use crate::app::{DbAction, DbActionReturn};
+use crate::app::DbActionReturn;
 use crate::entities::{idea, prelude::Idea as eIdea};
 
 use super::counter::Counter;
