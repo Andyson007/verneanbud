@@ -128,8 +128,9 @@ impl App<'_> {
     /// blocks on completing each of the pending Database actions
     /// FIXME: This should be possible to be awaited asyncronousely instead
     pub fn run_db_actions(&mut self) -> Result<(), DbErr> {
-        for (id, (future, _)) in self.db_actions.drain() {
+        for (_, (future, callback)) in self.db_actions.drain() {
             block_on(future)?;
+            callback(&mut self.view_data);
         }
         Ok(())
     }
