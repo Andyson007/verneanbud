@@ -6,7 +6,7 @@ pub struct Counter {
 impl Counter {
     pub fn next(&mut self) -> usize {
         self.counter += 1;
-        self.counter - 1
+        self.counter
     }
 
     pub const fn get(&self) -> usize {

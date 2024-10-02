@@ -70,7 +70,7 @@ impl Idea {
         let Some(counter) = Rc::get_mut(&mut self.counter) else {
             panic!("I don't even know how.")
         };
-        self.ideas.push(IdeaType::new_future(counter, idea));
+        self.ideas.push(IdeaType::new_future(counter.next(), idea));
         self.counter.get()
     }
 
@@ -183,8 +183,8 @@ impl IdeaType {
         }
     }
 
-    fn new_future(counter: &mut Counter, idea: idea::Model) -> Self {
-        Self::DbActionPending(counter.next(), idea)
+    fn new_future(id: usize, idea: idea::Model) -> Self {
+        Self::DbActionPending(id, idea)
     }
 
     fn convert_to_db_action(&mut self) -> Option<usize> {

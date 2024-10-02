@@ -105,7 +105,7 @@ impl Popup for IdeaPopup {
                     return Action::Db(Box::new(
                         move |view_data: &mut ViewData, conn_opts: ConnectOptions| {
                             let to_insert = idea::Model {
-                                id: 0,
+                                id: -1,
                                 title: cloned.title.clone(),
                                 description: cloned.description.clone(),
                                 author: cloned.author.clone(),
