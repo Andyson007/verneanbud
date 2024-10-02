@@ -9,7 +9,11 @@ use ratatui::{
 use sea_orm::{sqlx::types::chrono, ActiveValue, ConnectOptions, Database, EntityTrait};
 
 use crate::{
-    entities::{idea, prelude::Idea, sea_orm_active_enums::Issuekind},
+    entities::{
+        comment, idea,
+        prelude::{Comment, Idea},
+        sea_orm_active_enums::Issuekind,
+    },
     popups::Popup,
     style::Style,
     view_data::ViewData,
@@ -18,23 +22,18 @@ use crate::{
 use super::Action;
 
 #[derive(Default, Clone, Debug)]
-pub(crate) struct IdeaPopup {
+pub(crate) struct CommontPopup {
     pub(crate) author: String,
-    pub(crate) title: String,
-    pub(crate) description: String,
+    pub(crate) content: String,
     selected: Selected,
 }
 
-impl Popup for IdeaPopup {
+impl Popup for CommontPopup {
     fn render(&self, style: Style, area: ratatui::prelude::Rect, frame: &mut Frame) {
         frame.render_widget(Clear, area);
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(3),
-                Constraint::Length(3),
-                Constraint::Fill(1),
-            ])
+            .constraints([Constraint::Length(3), Constraint::Fill(1)])
             .split(area);
         let base_block = Block::default()
             .borders(Borders::ALL)
@@ -55,29 +54,16 @@ impl Popup for IdeaPopup {
 
         let block = base_block
             .clone()
-            .border_style(if matches!(self.selected, Selected::Title) {
+            .border_style(if matches!(self.selected, Selected::Content) {
                 style.highlighted
             } else {
                 style.not_highlighted
             })
-            .title("Title");
-        let para = Paragraph::new(self.title.clone())
+            .title("Content");
+        let para = Paragraph::new(self.content.clone())
             .block(block)
             .wrap(Wrap { trim: false });
         frame.render_widget(para, layout[1]);
-
-        let block = base_block
-            .clone()
-            .border_style(if matches!(self.selected, Selected::Description) {
-                style.highlighted
-            } else {
-                style.not_highlighted
-            })
-            .title("Description");
-        let para = Paragraph::new(self.description.clone())
-            .block(block)
-            .wrap(Wrap { trim: false });
-        frame.render_widget(para, layout[2]);
     }
 
     fn handle_input<'a>(&mut self, key: crossterm::event::KeyEvent) -> Action<'a> {
@@ -99,29 +85,25 @@ impl Popup for IdeaPopup {
                 KeyCode::BackTab => self.selected = self.selected.prev(),
                 KeyCode::Backspace => drop(self.get_str_handle().pop()),
                 KeyCode::Char(c) => self.get_str_handle().push(c),
-                KeyCode::Enter if matches!(self.selected, Selected::Title) => {
-                    let kind = Issuekind::Issue;
+                KeyCode::Enter if matches!(self.selected, Selected::Author) => {
                     let cloned = self.clone();
                     return Action::Db(Box::new(
                         move |view_data: &mut ViewData, conn_opts: ConnectOptions| {
-                            let to_insert = idea::Model {
+                            let to_insert = comment::Model {
                                 id: -1,
-                                title: cloned.title.clone(),
-                                description: cloned.description.clone(),
                                 author: cloned.author.clone(),
-                                solved: false,
-                                kind,
+                                content: cloned.content.clone(),
                                 time: chrono::Local::now().naive_local(),
+                                comments_on: 5,
                             };
-                            let id = view_data.idea.new_idea(to_insert.clone());
+                            let id = view_data.idea.new_comment(to_insert.clone());
 
-                            let to_insert_active_model = idea::ActiveModel {
-                                title: ActiveValue::Set(to_insert.title.clone()),
-                                description: ActiveValue::Set(to_insert.description.clone()),
+                            let id = 5;
+                            let to_insert_active_model = comment::ActiveModel {
                                 author: ActiveValue::Set(to_insert.author.clone()),
-                                solved: ActiveValue::Set(to_insert.solved),
-                                kind: ActiveValue::Set(to_insert.kind),
+                                content: ActiveValue::Set(to_insert.content.clone()),
                                 time: ActiveValue::Set(to_insert.time),
+                                comments_on: ActiveValue::Set(to_insert.comments_on),
                                 ..Default::default()
                             };
                             Some((
@@ -130,7 +112,7 @@ impl Popup for IdeaPopup {
                                     async move {
                                         let db = Database::connect(conn_opts).await?;
 
-                                        Idea::insert(to_insert_active_model).exec(&db).await?;
+                                        Comment::insert(to_insert_active_model).exec(&db).await?;
 
                                         Ok(())
                                     }
@@ -151,12 +133,11 @@ impl Popup for IdeaPopup {
     }
 }
 
-impl IdeaPopup {
+impl CommontPopup {
     fn get_str_handle(&mut self) -> &mut String {
         match self.selected {
             Selected::Author => &mut self.author,
-            Selected::Title => &mut self.title,
-            Selected::Description => &mut self.description,
+            Selected::Content => &mut self.content,
         }
     }
 }
@@ -165,24 +146,21 @@ impl IdeaPopup {
 enum Selected {
     #[default]
     Author,
-    Title,
-    Description,
+    Content,
 }
 
 impl Selected {
     pub const fn next(&self) -> Self {
         match self {
-            Self::Author => Self::Title,
-            Self::Title => Self::Description,
-            Self::Description => Self::Author,
+            Self::Author => Self::Content,
+            Self::Content => Self::Author,
         }
     }
 
     pub const fn prev(&self) -> Self {
         match self {
-            Self::Author => Self::Description,
-            Self::Title => Self::Author,
-            Self::Description => Self::Title,
+            Self::Author => Self::Content,
+            Self::Content => Self::Author,
         }
     }
 }

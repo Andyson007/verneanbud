@@ -5,6 +5,7 @@ use std::ops::{Index, IndexMut};
 use std::rc::Rc;
 
 use crate::app::DbActionReturn;
+use crate::entities::comment;
 use crate::entities::{idea, prelude::Idea as eIdea};
 
 use super::counter::Counter;
@@ -66,13 +67,22 @@ impl Idea {
         }
     }
 
-    pub fn new_future(&mut self, idea: idea::Model) -> usize {
+    pub fn new_idea(&mut self, idea: idea::Model) -> usize {
         let Some(counter) = Rc::get_mut(&mut self.counter) else {
             panic!("I don't even know how.")
         };
         self.ideas.push(IdeaType::new_future(counter.next(), idea));
         self.counter.get()
     }
+
+    pub fn new_comment(&mut self, comment: comment::Model) -> usize {
+        let Some(counter) = Rc::get_mut(&mut self.counter) else {
+            panic!("I don't even know how.")
+        };
+        // self.ideas.push(IdeaType::new_future(counter.next(), comment));
+        self.counter.get()
+    }
+
 
     pub fn iter(
         &self,

@@ -2,5 +2,6 @@
 
 pub mod prelude;
 
+pub mod comment;
 pub mod idea;
 pub mod sea_orm_active_enums;

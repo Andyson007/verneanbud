@@ -7,7 +7,7 @@ use futures::{executor::block_on, Future};
 use sea_orm::{ConnectOptions, DbErr};
 
 use crate::{
-    popups::{idea::IdeaPopup, Action, Popup},
+    popups::{comment::CommontPopup, idea::IdeaPopup, Action, Popup},
     style::Style,
     view_data::ViewData,
 };
@@ -102,17 +102,8 @@ impl App<'_> {
                 KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
                 KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
                 KeyCode::Char('r') => block_on(self.view_data.refresh(&self.conn_opts)).unwrap(),
-                KeyCode::Char('d') => 'block: {
-                    let Some(db_action) = self.view_data.idea.delete() else {
-                        break 'block;
-                    };
-                    let Some((id, db_action)) =
-                        db_action(&mut self.view_data, self.conn_opts.clone())
-                    else {
-                        break 'block;
-                    };
-                    self.db_actions.insert(id, db_action);
-                }
+                KeyCode::Char('d') => self.delete_idea(),
+                KeyCode::Char('c') => self.popup = Some(Box::new(CommontPopup::default())),
                 KeyCode::Char(' ') => {
                     todo!("Toggle state")
                 }
@@ -123,6 +114,16 @@ impl App<'_> {
             },
         }
         false
+    }
+
+    fn delete_idea(&mut self) {
+        let Some(db_action) = self.view_data.idea.delete() else {
+            return;
+        };
+        let Some((id, db_action)) = db_action(&mut self.view_data, self.conn_opts.clone()) else {
+            return;
+        };
+        self.db_actions.insert(id, db_action);
     }
 
     /// blocks on completing each of the pending Database actions

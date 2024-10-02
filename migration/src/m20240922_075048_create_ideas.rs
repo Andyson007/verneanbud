@@ -42,7 +42,7 @@ impl MigrationTrait for Migration {
 }
 
 #[derive(DeriveIden)]
-enum Idea {
+pub enum Idea {
     Table,
     Id,
     Author,
