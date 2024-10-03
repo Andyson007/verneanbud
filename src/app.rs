@@ -12,6 +12,8 @@ use crate::{
     view_data::ViewData,
 };
 
+/// The url of the database. It should be stored:
+/// `protocol://username:password@address:port/database_name`
 const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
 
 /// A future which is intended to modify the DB
@@ -73,25 +75,21 @@ impl App<'_> {
 
     /// Handles an input
     pub fn handle_input(&mut self, key: KeyEvent) -> bool {
-        if self.popup.is_some() {
-            let should_close = {
-                let popup_action = self.popup.as_mut().unwrap().handle_input(key);
-                let should_close = popup_action.close_popup();
-                'block: {
-                    if let Action::Db(db_action) = popup_action {
-                        let Some((id, (future, callback))) =
-                            db_action(&mut self.view_data, self.conn_opts.clone())
-                        else {
-                            break 'block;
-                        };
-                        self.db_actions.insert(id, (future, callback));
-                    }
-                }
-                should_close
-            };
+        if let Some(popup) = self.popup.as_mut() {
+            let popup_action = popup.handle_input(key);
+            let should_close = popup_action.close_popup();
+
+            if let Action::Db(db_action) = popup_action {
+                if let Some((id, (future, callback))) =
+                    db_action(&mut self.view_data, self.conn_opts.clone())
+                {
+                    self.db_actions.insert(id, (future, callback));
+                };
+            }
+
             if should_close {
                 self.popup = None;
-            }
+            };
 
             return false;
         }
