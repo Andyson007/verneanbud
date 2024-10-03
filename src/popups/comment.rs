@@ -90,10 +90,12 @@ impl Popup for CommontPopup {
                                 author: cloned.author.clone(),
                                 content: cloned.content.clone(),
                                 time: chrono::Local::now().naive_local(),
-                                comments_on: 5,
+                                comments_on: view_data.idea.current().unwrap().0.get_entry().id,
                             };
 
-                            let id = view_data.idea.new_comment(to_insert.clone());
+                            let id = view_data
+                                .idea
+                                .new_comment(view_data.idea.selected.unwrap(), to_insert.clone());
 
                             let to_insert_active_model = comment::ActiveModel {
                                 author: ActiveValue::Set(to_insert.author.clone()),

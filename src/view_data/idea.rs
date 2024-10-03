@@ -12,15 +12,17 @@ use crate::{
 
 use super::{counter::Counter, db_type::DbType, ViewData};
 
+type IdeaType = (DbType<idea::Model>, Vec<DbType<comment::Model>>);
+
 #[derive(Debug)]
 pub struct Idea {
     pub selected: Option<usize>,
-    pub ideas: Vec<(DbType<idea::Model>, Vec<DbType<comment::Model>>)>,
+    pub ideas: Vec<IdeaType>,
     counter: Rc<Counter>,
 }
 
 impl Index<usize> for Idea {
-    type Output = (DbType<idea::Model>, Vec<DbType<comment::Model>>);
+    type Output = IdeaType;
 
     fn index(&self, idx: usize) -> &Self::Output {
         &self.ideas[self.ideas.len() - idx - 1]
@@ -78,11 +80,15 @@ impl Idea {
         self.counter.get()
     }
 
-    pub fn new_comment(&mut self, comment: comment::Model) -> usize {
+    pub fn new_comment(&mut self, comments_on: usize, comment: comment::Model) -> usize {
         let Some(counter) = Rc::get_mut(&mut self.counter) else {
             panic!("I don't even know how.")
         };
-        // self.ideas.push(IdeaType::new_future(counter.next(), comment));
+
+        self.ideas[comments_on]
+            .1
+            .push(DbType::new_future(counter.next(), comment));
+
         self.counter.get()
     }
 
@@ -157,5 +163,9 @@ impl Idea {
                 ))
             },
         ))
+    }
+
+    pub fn current(&mut self) -> Option<&mut IdeaType> {
+        Some(&mut self.ideas[self.selected?])
     }
 }
