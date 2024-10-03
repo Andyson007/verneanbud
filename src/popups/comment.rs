@@ -110,14 +110,23 @@ impl Popup for CommontPopup {
                                     async move {
                                         let db = Database::connect(conn_opts).await?;
 
-                                        Comment::insert(to_insert_active_model).exec(&db).await?;
+                                        let a = Comment::insert(to_insert_active_model)
+                                            .exec(&db)
+                                            .await?;
 
-                                        Ok(())
+                                        Ok(Some(a.last_insert_id))
                                     }
                                     .boxed(),
-                                    Box::new(move |view_data: &mut ViewData| {
-                                        let _ = view_data.idea.inserted(id);
-                                    }),
+                                    Box::new(
+                                        move |view_data: &mut ViewData, new_id: Option<i32>| {
+                                            let _ = view_data.idea.inserted(
+                                                id,
+                                                new_id.expect(
+                                                    "This method cannot be called with None",
+                                                ),
+                                            );
+                                        },
+                                    ),
                                 ),
                             ))
                         },

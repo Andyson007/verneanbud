@@ -17,9 +17,9 @@ use crate::{
 const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
 
 /// A future which is intended to modify the DB
-pub type DbAction<'a> = Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>;
+pub type DbAction<'a> = Pin<Box<dyn Future<Output = Result<Option<i32>, DbErr>> + Send + 'a>>;
 /// This function should be called after the element has been inserted into the Db.
-pub type DbActionCallback = Box<dyn FnOnce(&mut ViewData)>;
+pub type DbActionCallback = Box<dyn FnOnce(&mut ViewData, Option<i32>)>;
 /// The return type of something that is going to modify the db
 pub type DbActionReturn<'a> = Box<
     dyn FnOnce(&mut ViewData, ConnectOptions) -> Option<(usize, (DbAction<'a>, DbActionCallback))>,
@@ -129,8 +129,8 @@ impl App<'_> {
                     }
                 }
                 key => match key.code {
-                    KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.up(),
-                    KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
+                    KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.down(),
+                    KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.up(),
                     KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
                     KeyCode::Char('r') => {
                         block_on(self.view_data.refresh(&self.conn_opts)).unwrap();
@@ -164,8 +164,8 @@ impl App<'_> {
     /// FIXME: This should be possible to be awaited asyncronousely instead
     pub fn run_db_actions(&mut self) -> Result<(), DbErr> {
         for (_, (future, callback)) in self.db_actions.drain() {
-            block_on(future)?;
-            callback(&mut self.view_data);
+            let id = block_on(future)?;
+            callback(&mut self.view_data, id);
         }
         Ok(())
     }

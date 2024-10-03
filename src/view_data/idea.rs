@@ -1,9 +1,6 @@
 use futures::FutureExt;
 use sea_orm::{ConnectOptions, Database, DbErr, EntityTrait, QueryOrder};
-use std::{
-    ops::{Index, IndexMut},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use crate::{
     app::DbActionReturn,
@@ -22,21 +19,6 @@ pub struct Idea {
     pub selected: Option<usize>,
     pub ideas: Vec<IdeaType>,
     counter: Arc<Counter>,
-}
-
-impl Index<usize> for Idea {
-    type Output = IdeaType;
-
-    fn index(&self, idx: usize) -> &Self::Output {
-        &self.ideas[self.ideas.len() - idx - 1]
-    }
-}
-
-impl IndexMut<usize> for Idea {
-    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
-        let index = self.ideas.len() - idx - 1;
-        &mut self.ideas[index]
-    }
 }
 
 impl Idea {
@@ -100,14 +82,17 @@ impl Idea {
     }
 
     /// Converts a pendic Db-action to to a DB element by id
-    pub fn inserted(&mut self, id: usize) -> Result<(), ()> {
+    pub fn inserted(&mut self, id: usize, new_id: i32) -> Result<(), ()> {
         match self
             .ideas
             .iter_mut()
             .find(|x| matches!(x.0, DbType::DbActionPending(dbid, _) if dbid == id))
         {
             None => return Err(()),
-            Some(x) => x,
+            Some(x) => {
+                x.0.get_entry_mut().id = new_id;
+                x
+            }
         }
         .0
         .convert_to_db();
@@ -122,7 +107,7 @@ impl Idea {
     pub fn delete<'a>(&self) -> Option<DbActionReturn<'a>> {
         let selected = self.selected?;
 
-        let DbType::InDb(idea::Model { id, .. }) = self[selected].0 else {
+        let DbType::InDb(idea::Model { id, .. }) = self.ideas[selected].0 else {
             return None;
         };
 
@@ -142,10 +127,14 @@ impl Idea {
 
                             eIdea::delete_by_id(id).exec(&db).await?;
 
-                            Ok(())
+                            Ok(None)
                         }
                         .boxed(),
-                        Box::new(move |view_data: &mut ViewData| {
+                        Box::new(move |view_data: &mut ViewData, new_id: Option<_>| {
+                            assert!(
+                                new_id.is_none(),
+                                "There is probably a bug, this shouldn't be called with Some"
+                            );
                             let Some(pos) = view_data.idea.ideas.iter_mut().position(
                                 |x| matches!(x.0, DbType::InDb(idea::Model {id: model_id, ..}) if id == model_id)
                             ) else {

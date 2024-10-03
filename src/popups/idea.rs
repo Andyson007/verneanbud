@@ -130,14 +130,21 @@ impl Popup for IdeaPopup {
                                     async move {
                                         let db = Database::connect(conn_opts).await?;
 
-                                        Idea::insert(to_insert_active_model).exec(&db).await?;
-
-                                        Ok(())
+                                        let a =
+                                            Idea::insert(to_insert_active_model).exec(&db).await?;
+                                        Ok(Some(a.last_insert_id))
                                     }
                                     .boxed(),
-                                    Box::new(move |view_data: &mut ViewData| {
-                                        let _ = view_data.idea.inserted(id);
-                                    }),
+                                    Box::new(
+                                        move |view_data: &mut ViewData, new_id: Option<i32>| {
+                                            let _ = view_data.idea.inserted(
+                                                id,
+                                                new_id.expect(
+                                                    "This callback can't be called with none",
+                                                ),
+                                            );
+                                        },
+                                    ),
                                 ),
                             ))
                         },

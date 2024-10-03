@@ -59,7 +59,12 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
 }
 
 fn render_select(app: &App, frame: &mut Frame, view: Rect) {
-    let mut list_state = ListState::default().with_selected(app.view_data.idea.selected);
+    let mut list_state = ListState::default().with_selected(
+        app.view_data
+            .idea
+            .selected
+            .map(|x| app.view_data.idea.ideas.len() - x - 1),
+    );
     let max_title_len = app
         .view_data
         .idea
