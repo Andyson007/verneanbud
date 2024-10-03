@@ -165,7 +165,11 @@ impl Idea {
         ))
     }
 
-    pub fn current(&mut self) -> Option<&mut IdeaType> {
+    pub fn current(&self) -> Option<&IdeaType> {
+        Some(&self.ideas[self.selected?])
+    }
+
+    pub fn current_mut(&mut self) -> Option<&mut IdeaType> {
         Some(&mut self.ideas[self.selected?])
     }
 }

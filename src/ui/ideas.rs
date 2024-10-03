@@ -14,13 +14,8 @@ pub fn render(app: &App, frame: &mut Frame, mainview: Rect, infoview: Rect) {
 }
 
 fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
-    if let Some(raw_text) = app
-        .view_data
-        .idea
-        .selected
-        .map(|x| &app.view_data.idea[x])
-        .map(|selected_idea| selected_idea.0.get_entry().description.clone())
-    {
+    if let Some(selected_idea) = app.view_data.idea.current() {
+        let raw_text = selected_idea.0.get_entry().description.clone();
         let widget = Paragraph::new(Text::from(
             raw_text
                 .lines()
@@ -29,6 +24,13 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
                     "\u{2500}".repeat(50),
                     Style::new().fg(Color::Green),
                 )])
+                .chain(
+                    selected_idea
+                        .1
+                        .iter()
+                        .map(|x| x.get_entry().content.clone())
+                        .map(Span::raw),
+                )
                 .map(Line::from)
                 .collect::<Vec<_>>(),
         ))
