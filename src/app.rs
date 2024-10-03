@@ -14,8 +14,11 @@ use crate::{
 
 const DATABASE_URL: &str = "postgres://vern:vern@localhost:5432/verneanbud";
 
+/// A future which is intended to modify the DB
 pub type DbAction<'a> = Pin<Box<dyn Future<Output = Result<(), DbErr>> + Send + 'a>>;
+/// This function should be called after the element has been inserted into the Db.
 pub type DbActionCallback = Box<dyn FnOnce(&mut ViewData)>;
+/// The return type of something that is going to modify the db
 pub type DbActionReturn<'a> = Box<
     dyn FnOnce(&mut ViewData, ConnectOptions) -> Option<(usize, (DbAction<'a>, DbActionCallback))>,
 >;
@@ -107,11 +110,14 @@ impl App<'_> {
                     if let Some(x) = self.view_data.idea.current_mut() {
                         x.2 = cmp::min(
                             x.2 + 3,
-                            x.1.iter()
-                                .map(|x| x.get_entry().content.lines().count() as u16 + 1)
-                                .sum::<u16>()
-                                + x.0.get_entry().description.lines().count() as u16,
-                        )
+                            u16::try_from(
+                                x.1.iter()
+                                    .map(|x| x.get_entry().content.lines().count() + 1)
+                                    .sum::<usize>()
+                                    + x.0.get_entry().description.lines().count(),
+                            )
+                            .unwrap(),
+                        );
                     }
                 }
                 KeyEvent {
@@ -129,7 +135,7 @@ impl App<'_> {
                     KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
                     KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
                     KeyCode::Char('r') => {
-                        block_on(self.view_data.refresh(&self.conn_opts)).unwrap()
+                        block_on(self.view_data.refresh(&self.conn_opts)).unwrap();
                     }
                     KeyCode::Char('d') => self.delete_idea(),
                     KeyCode::Char('c') => self.popup = Some(Box::new(CommontPopup::default())),

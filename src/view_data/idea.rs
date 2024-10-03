@@ -2,7 +2,7 @@ use futures::FutureExt;
 use sea_orm::{ConnectOptions, Database, DbErr, EntityTrait, QueryOrder};
 use std::{
     ops::{Index, IndexMut},
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::{
@@ -21,7 +21,7 @@ type IdeaType = (DbType<idea::Model>, Vec<DbType<comment::Model>>, u16);
 pub struct Idea {
     pub selected: Option<usize>,
     pub ideas: Vec<IdeaType>,
-    counter: Rc<Counter>,
+    counter: Arc<Counter>,
 }
 
 impl Index<usize> for Idea {
@@ -40,7 +40,7 @@ impl IndexMut<usize> for Idea {
 }
 
 impl Idea {
-    pub async fn new(conn_opts: &ConnectOptions, counter: Rc<Counter>) -> Result<Self, DbErr> {
+    pub async fn new(conn_opts: &ConnectOptions, counter: Arc<Counter>) -> Result<Self, DbErr> {
         let db = Database::connect(conn_opts.clone()).await?;
         let ideas = eIdea::find()
             .find_with_related(comment::Entity)
@@ -50,7 +50,7 @@ impl Idea {
             .into_iter()
             .map(|(a, b)| {
                 let mut b: Vec<_> = b.into_iter().map(DbType::InDb).collect();
-                b.sort_by_key(|x|x.get_entry().time);
+                b.sort_by_key(|x| x.get_entry().time);
                 (DbType::InDb(a), b, 0)
             })
             .collect();
@@ -79,7 +79,7 @@ impl Idea {
     }
 
     pub fn new_idea(&mut self, idea: idea::Model) -> usize {
-        let Some(counter) = Rc::get_mut(&mut self.counter) else {
+        let Some(counter) = Arc::get_mut(&mut self.counter) else {
             panic!("I don't even know how.")
         };
         self.ideas
@@ -88,7 +88,7 @@ impl Idea {
     }
 
     pub fn new_comment(&mut self, comments_on: usize, comment: comment::Model) -> usize {
-        let Some(counter) = Rc::get_mut(&mut self.counter) else {
+        let Some(counter) = Arc::get_mut(&mut self.counter) else {
             panic!("I don't even know how.")
         };
 
@@ -114,11 +114,12 @@ impl Idea {
         Ok(())
     }
 
-    pub fn refresh(&mut self, _conn_opts: &ConnectOptions) {
+    #[allow(clippy::needless_pass_by_ref_mut, clippy::unused_async)]
+    pub async fn refresh(&mut self, _conn_opts: &ConnectOptions) {
         todo!("This should refresh the Databases inside of here")
     }
 
-    pub fn delete<'a>(&mut self) -> Option<DbActionReturn<'a>> {
+    pub fn delete<'a>(&self) -> Option<DbActionReturn<'a>> {
         let selected = self.selected?;
 
         let DbType::InDb(idea::Model { id, .. }) = self[selected].0 else {

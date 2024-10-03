@@ -88,7 +88,7 @@ impl Popup for CommontPopup {
                             let to_insert = comment::Model {
                                 id: -1,
                                 author: cloned.author.clone(),
-                                content: cloned.content.clone(),
+                                content: cloned.content,
                                 time: chrono::Local::now().naive_local(),
                                 comments_on: view_data.idea.current().unwrap().0.get_entry().id,
                             };

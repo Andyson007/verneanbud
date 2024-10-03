@@ -1,9 +1,9 @@
 use sea_orm::{ConnectOptions, DbErr};
-use std::rc::Rc;
+use std::sync::Arc;
 
 mod counter;
-mod idea;
-mod db_type;
+pub mod db_type;
+pub mod idea;
 
 use counter::Counter;
 use idea::Idea;
@@ -18,14 +18,14 @@ pub struct ViewData {
 
 impl ViewData {
     pub async fn new(conn_opts: &ConnectOptions) -> Result<Self, DbErr> {
-        let counter = Rc::new(Counter::default());
+        let counter = Arc::new(Counter::default());
         Ok(Self {
-            idea: Idea::new(conn_opts, Rc::clone(&counter)).await?,
+            idea: Idea::new(conn_opts, Arc::clone(&counter)).await?,
         })
     }
 
     pub async fn refresh(&mut self, conn_opts: &ConnectOptions) -> Result<(), DbErr> {
-        self.idea.refresh(conn_opts);
+        self.idea.refresh(conn_opts).await;
         Ok(())
     }
 }

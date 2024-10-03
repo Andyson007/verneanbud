@@ -1,3 +1,5 @@
+use std::iter;
+
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, List, ListState, Paragraph, Wrap},
@@ -6,7 +8,7 @@ use ratatui::{
 
 use ratatui::prelude::*;
 
-use crate::{app::App, entities::sea_orm_active_enums::Issuekind};
+use crate::{app::App, entities::sea_orm_active_enums::Issuekind, view_data::db_type::DbType};
 
 pub fn render(app: &App, frame: &mut Frame, mainview: Rect, infoview: Rect) {
     render_select(app, frame, mainview);
@@ -24,12 +26,15 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
                     "\u{2500}".repeat(50),
                     Style::new().fg(Color::Green),
                 )])
-                .chain(selected_idea.1.iter().map(|x| x.get_entry()).flat_map(|x| {
-                    [Span::styled(
-                        format!("{}, ({})", x.author.clone(), x.time.format("%d/%m/%Y [%H:%m]")),
+                .chain(selected_idea.1.iter().map(DbType::get_entry).flat_map(|x| {
+                    iter::once(Span::styled(
+                        format!(
+                            "{}, ({})",
+                            x.author.clone(),
+                            x.time.format("%d/%m/%Y [%H:%m]")
+                        ),
                         Style::new().bold().underlined(),
-                    )]
-                    .into_iter()
+                    ))
                     .chain(x.content.lines().map(|x| format!(" {x}")).map(Span::raw))
                 }))
                 .map(Line::from)

@@ -13,17 +13,15 @@ impl<T> DbType<T>
 where
     T: Clone,
 {
-    pub fn get_entry(&self) -> &T {
+    pub const fn get_entry(&self) -> &T {
         match self {
-            DbType::InDb(ref x) => x,
-            DbType::DbActionPending(_, ref x) => x,
+            Self::InDb(ref x) | Self::DbActionPending(_, ref x) => x,
         }
     }
 
     pub fn get_entry_mut(&mut self) -> &mut T {
         match self {
-            DbType::InDb(ref mut x) => x,
-            DbType::DbActionPending(_, ref mut x) => x,
+            Self::InDb(ref mut x) | Self::DbActionPending(_, ref mut x) => x,
         }
     }
 
@@ -35,11 +33,11 @@ where
         }
     }
 
-    pub fn new_future(id: usize, idea: T) -> Self {
+    pub const fn new_future(id: usize, idea: T) -> Self {
         Self::DbActionPending(id, idea)
     }
 
-    pub fn convert_to_db_action(&mut self) -> Option<usize> {
+    pub fn convert_to_db_action(&self) -> Option<usize> {
         if matches!(self, Self::DbActionPending(..)) {
             return None;
         }
