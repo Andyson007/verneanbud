@@ -47,7 +47,8 @@ impl Idea {
         if self.ideas.is_empty() {
             self.selected = None;
         } else {
-            self.selected = Some(self.selected.map_or(0, |x| x + 1) % self.ideas.len());
+            self.selected =
+                Some(self.selected.map_or(self.ideas.len() - 1, |x| x + 1) % self.ideas.len());
         }
     }
 
@@ -55,8 +56,11 @@ impl Idea {
         if self.ideas.is_empty() {
             self.selected = None;
         } else {
-            self.selected =
-                Some(self.selected.map_or(0, |x| x + self.ideas.len() - 1) % self.ideas.len());
+            self.selected = Some(
+                self.selected
+                    .map_or(self.ideas.len() - 1, |x| x + self.ideas.len() - 1)
+                    % self.ideas.len(),
+            );
         }
     }
 
