@@ -12,7 +12,10 @@ use crate::{
 
 use super::{counter::Counter, db_type::DbType, ViewData};
 
-type IdeaType = (DbType<idea::Model>, Vec<DbType<comment::Model>>);
+/// 0: The idea description
+/// 1: The comments on the idea
+/// 2: Scroll distance
+type IdeaType = (DbType<idea::Model>, Vec<DbType<comment::Model>>, u16);
 
 #[derive(Debug)]
 pub struct Idea {
@@ -48,7 +51,7 @@ impl Idea {
             .map(|(a, b)| {
                 let mut b: Vec<_> = b.into_iter().map(DbType::InDb).collect();
                 b.sort_by_key(|x|x.get_entry().time);
-                (DbType::InDb(a), b)
+                (DbType::InDb(a), b, 0)
             })
             .collect();
         Ok(Self {
@@ -80,7 +83,7 @@ impl Idea {
             panic!("I don't even know how.")
         };
         self.ideas
-            .push((DbType::new_future(counter.next(), idea), Vec::new()));
+            .push((DbType::new_future(counter.next(), idea), Vec::new(), 0));
         self.counter.get()
     }
 

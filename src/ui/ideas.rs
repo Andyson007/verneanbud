@@ -26,11 +26,11 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
                 )])
                 .chain(selected_idea.1.iter().map(|x| x.get_entry()).flat_map(|x| {
                     [Span::styled(
-                        x.author.clone(),
+                        format!("{}, ({})", x.author.clone(), x.time.format("%d/%m/%Y [%H:%m]")),
                         Style::new().bold().underlined(),
                     )]
                     .into_iter()
-                    .chain(x.content.lines().map(|x| format!("\t{x}")).map(Span::raw))
+                    .chain(x.content.lines().map(|x| format!(" {x}")).map(Span::raw))
                 }))
                 .map(Line::from)
                 .collect::<Vec<_>>(),
@@ -40,7 +40,8 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
             Block::bordered()
                 .title("Description")
                 .border_type(ratatui::widgets::BorderType::Rounded),
-        );
+        )
+        .scroll((selected_idea.2, 0));
         frame.render_widget(widget, view);
     } else {
         let text = Paragraph::new("Select an entry to view").block(

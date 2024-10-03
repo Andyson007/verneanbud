@@ -1,8 +1,8 @@
 //! This module contains everything related to the appstate
 
-use std::{collections::HashMap, pin::Pin};
+use std::{cmp, collections::HashMap, pin::Pin};
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
 use futures::{executor::block_on, Future};
 use sea_orm::{ConnectOptions, DbErr};
 
@@ -97,20 +97,50 @@ impl App<'_> {
         }
 
         match self.view {
-            View::Ideas => match key.code {
-                KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.up(),
-                KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
-                KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
-                KeyCode::Char('r') => block_on(self.view_data.refresh(&self.conn_opts)).unwrap(),
-                KeyCode::Char('d') => self.delete_idea(),
-                KeyCode::Char('c') => self.popup = Some(Box::new(CommontPopup::default())),
-                KeyCode::Char(' ') => {
-                    todo!("Toggle state")
+            View::Ideas => match key {
+                KeyEvent {
+                    code: KeyCode::Char('d'),
+                    modifiers: KeyModifiers::CONTROL,
+                    kind: KeyEventKind::Repeat | KeyEventKind::Press,
+                    state: KeyEventState::NONE,
+                } => {
+                    if let Some(x) = self.view_data.idea.current_mut() {
+                        x.2 = cmp::min(
+                            x.2 + 3,
+                            x.1.iter()
+                                .map(|x| x.get_entry().content.lines().count() as u16 + 1)
+                                .sum::<u16>()
+                                + x.0.get_entry().description.lines().count() as u16,
+                        )
+                    }
                 }
-                KeyCode::Char('e') => {
-                    todo!("Edit something")
+                KeyEvent {
+                    code: KeyCode::Char('u'),
+                    modifiers: KeyModifiers::CONTROL,
+                    kind: KeyEventKind::Repeat | KeyEventKind::Press,
+                    state: KeyEventState::NONE,
+                } => {
+                    if let Some(x) = self.view_data.idea.current_mut() {
+                        x.2 = x.2.saturating_sub(3);
+                    }
                 }
-                _ => (),
+                key => match key.code {
+                    KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.up(),
+                    KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.down(),
+                    KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
+                    KeyCode::Char('r') => {
+                        block_on(self.view_data.refresh(&self.conn_opts)).unwrap()
+                    }
+                    KeyCode::Char('d') => self.delete_idea(),
+                    KeyCode::Char('c') => self.popup = Some(Box::new(CommontPopup::default())),
+                    KeyCode::Char(' ') => {
+                        todo!("Toggle state")
+                    }
+                    KeyCode::Char('e') => {
+                        todo!("Edit something")
+                    }
+                    _ => (),
+                },
             },
         }
         false
