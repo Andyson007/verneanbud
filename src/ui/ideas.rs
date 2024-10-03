@@ -24,13 +24,14 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
                     "\u{2500}".repeat(50),
                     Style::new().fg(Color::Green),
                 )])
-                .chain(
-                    selected_idea
-                        .1
-                        .iter()
-                        .map(|x| x.get_entry().content.clone())
-                        .map(Span::raw),
-                )
+                .chain(selected_idea.1.iter().map(|x| x.get_entry()).flat_map(|x| {
+                    [Span::styled(
+                        x.author.clone(),
+                        Style::new().bold().underlined(),
+                    )]
+                    .into_iter()
+                    .chain(x.content.lines().map(|x| format!("\t{x}")).map(Span::raw))
+                }))
                 .map(Line::from)
                 .collect::<Vec<_>>(),
         ))

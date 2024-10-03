@@ -45,7 +45,11 @@ impl Idea {
             .all(&db)
             .await?
             .into_iter()
-            .map(|(a, b)| (DbType::InDb(a), b.into_iter().map(DbType::InDb).collect()))
+            .map(|(a, b)| {
+                let mut b: Vec<_> = b.into_iter().map(DbType::InDb).collect();
+                b.sort_by_key(|x|x.get_entry().time);
+                (DbType::InDb(a), b)
+            })
             .collect();
         Ok(Self {
             selected: None,
