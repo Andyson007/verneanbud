@@ -1,25 +1,26 @@
 use futures::FutureExt;
-use sea_orm::{ConnectOptions, Database, DbErr};
-use sea_orm::{EntityTrait, QueryOrder};
-use std::ops::{Index, IndexMut};
-use std::rc::Rc;
+use sea_orm::{ConnectOptions, Database, DbErr, EntityTrait, QueryOrder};
+use std::{
+    ops::{Index, IndexMut},
+    rc::Rc,
+};
 
-use crate::app::DbActionReturn;
-use crate::entities::comment;
-use crate::entities::{idea, prelude::Idea as eIdea};
+use crate::{
+    app::DbActionReturn,
+    entities::{comment, idea, prelude::Idea as eIdea},
+};
 
-use super::counter::Counter;
-use super::ViewData;
+use super::{counter::Counter, db_type::DbType, ViewData};
 
 #[derive(Debug)]
 pub struct Idea {
     pub selected: Option<usize>,
-    ideas: Vec<IdeaType>,
+    pub ideas: Vec<(DbType<idea::Model>, Vec<DbType<comment::Model>>)>,
     counter: Rc<Counter>,
 }
 
 impl Index<usize> for Idea {
-    type Output = IdeaType;
+    type Output = (DbType<idea::Model>, Vec<DbType<comment::Model>>);
 
     fn index(&self, idx: usize) -> &Self::Output {
         &self.ideas[self.ideas.len() - idx - 1]
@@ -37,11 +38,12 @@ impl Idea {
     pub async fn new(conn_opts: &ConnectOptions, counter: Rc<Counter>) -> Result<Self, DbErr> {
         let db = Database::connect(conn_opts.clone()).await?;
         let ideas = eIdea::find()
+            .find_with_related(comment::Entity)
             .order_by_asc(idea::Column::Time)
             .all(&db)
             .await?
             .into_iter()
-            .map(IdeaType::InDb)
+            .map(|(a, b)| (DbType::InDb(a), b.into_iter().map(DbType::InDb).collect()))
             .collect();
         Ok(Self {
             selected: None,
@@ -71,7 +73,8 @@ impl Idea {
         let Some(counter) = Rc::get_mut(&mut self.counter) else {
             panic!("I don't even know how.")
         };
-        self.ideas.push(IdeaType::new_future(counter.next(), idea));
+        self.ideas
+            .push((DbType::new_future(counter.next(), idea), Vec::new()));
         self.counter.get()
     }
 
@@ -83,22 +86,17 @@ impl Idea {
         self.counter.get()
     }
 
-
-    pub fn iter(
-        &self,
-    ) -> std::iter::Map<std::slice::Iter<IdeaType>, fn(&IdeaType) -> &idea::Model> {
-        self.ideas.iter().map(IdeaType::get_entry)
-    }
-
+    /// Converts a pendic Db-action to to a DB element by id
     pub fn inserted(&mut self, id: usize) -> Result<(), ()> {
         match self
             .ideas
             .iter_mut()
-            .find(|x| matches!(x, IdeaType::DbActionPending(dbid, _) if *dbid == id))
+            .find(|x| matches!(x.0, DbType::DbActionPending(dbid, _) if dbid == id))
         {
             None => return Err(()),
             Some(x) => x,
         }
+        .0
         .convert_to_db();
         Ok(())
     }
@@ -110,17 +108,17 @@ impl Idea {
     pub fn delete<'a>(&mut self) -> Option<DbActionReturn<'a>> {
         let selected = self.selected?;
 
-        let IdeaType::InDb(idea::Model { id, .. }) = self[selected] else {
+        let DbType::InDb(idea::Model { id, .. }) = self[selected].0 else {
             return None;
         };
 
         Some(Box::new(
             move |view_data: &mut ViewData, conn_opts: ConnectOptions| {
                 let idea = view_data.idea.ideas.iter_mut().find(
-                    |x| matches!(x, IdeaType::InDb(idea::Model {id: model_id, ..}) if id == *model_id)
+                    |x| matches!(x.0, DbType::InDb(idea::Model {id: model_id, ..}) if id == model_id)
                 )?;
 
-                let action_id = idea.convert_to_db_action()?;
+                let action_id = idea.0.convert_to_db_action()?;
 
                 Some((
                     action_id,
@@ -135,7 +133,7 @@ impl Idea {
                         .boxed(),
                         Box::new(move |view_data: &mut ViewData| {
                             let Some(pos) = view_data.idea.ideas.iter_mut().position(
-                                |x| matches!(x, IdeaType::InDb(idea::Model {id: model_id, ..}) if id == *model_id)
+                                |x| matches!(x.0, DbType::InDb(idea::Model {id: model_id, ..}) if id == model_id)
                             ) else {
                                 return;
                             };
@@ -159,49 +157,5 @@ impl Idea {
                 ))
             },
         ))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum IdeaType {
-    /// For entries already in the db
-    InDb(idea::Model),
-    /// For futures that are currently awaited to be pushed
-    DbActionPending(usize, idea::Model),
-}
-
-impl IdeaType {
-    pub fn get_entry(&self) -> &idea::Model {
-        match self {
-            IdeaType::InDb(ref x) => x,
-            IdeaType::DbActionPending(_, ref x) => x,
-        }
-    }
-
-    pub fn get_entry_mut(&mut self) -> &mut idea::Model {
-        match self {
-            IdeaType::InDb(ref mut x) => x,
-            IdeaType::DbActionPending(_, ref mut x) => x,
-        }
-    }
-
-    /// Converts self to a database entry.
-    /// This happens unchecked and the id associated with it will be forgotten
-    pub fn convert_to_db(&mut self) {
-        if let Self::DbActionPending(_, x) = self {
-            *self = Self::InDb(x.clone());
-        }
-    }
-
-    fn new_future(id: usize, idea: idea::Model) -> Self {
-        Self::DbActionPending(id, idea)
-    }
-
-    fn convert_to_db_action(&mut self) -> Option<usize> {
-        if matches!(self, Self::DbActionPending(..)) {
-            return None;
-        }
-
-        Some(5)
     }
 }

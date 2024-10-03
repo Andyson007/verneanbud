@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 mod counter;
 mod idea;
+mod db_type;
 
 use counter::Counter;
 use idea::Idea;

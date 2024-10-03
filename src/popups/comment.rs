@@ -9,11 +9,7 @@ use ratatui::{
 use sea_orm::{sqlx::types::chrono, ActiveValue, ConnectOptions, Database, EntityTrait};
 
 use crate::{
-    entities::{
-        comment, idea,
-        prelude::{Comment, Idea},
-        sea_orm_active_enums::Issuekind,
-    },
+    entities::{comment, prelude::Comment},
     popups::Popup,
     style::Style,
     view_data::ViewData,
@@ -96,9 +92,9 @@ impl Popup for CommontPopup {
                                 time: chrono::Local::now().naive_local(),
                                 comments_on: 5,
                             };
+
                             let id = view_data.idea.new_comment(to_insert.clone());
 
-                            let id = 5;
                             let to_insert_active_model = comment::ActiveModel {
                                 author: ActiveValue::Set(to_insert.author.clone()),
                                 content: ActiveValue::Set(to_insert.content.clone()),
