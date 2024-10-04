@@ -1,11 +1,11 @@
 use core::panic;
 use futures::FutureExt;
-use sea_orm::{ConnectOptions, Database, DbErr, EntityTrait, QueryOrder};
+use sea_orm::{ColumnTrait, ConnectOptions, Database, DbErr, EntityTrait, QueryFilter, QueryOrder};
 use std::sync::Arc;
 
 use crate::{
     app::DbActionReturn,
-    entities::{comment, idea, prelude::Idea as eIdea},
+    entities::{comment, idea, prelude::Comment as eComment, prelude::Idea as eIdea},
 };
 
 use super::{counter::Counter, db_type::DbType, ViewData};
@@ -134,6 +134,10 @@ impl Idea {
                         async move {
                             let db = Database::connect(conn_opts).await?;
 
+                            eComment::delete_many()
+                                .filter(comment::Column::CommentsOn.eq(id))
+                                .exec(&db)
+                                .await?;
                             eIdea::delete_by_id(id).exec(&db).await?;
 
                             Ok(None)
