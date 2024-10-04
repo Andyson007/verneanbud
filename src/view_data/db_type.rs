@@ -37,10 +37,12 @@ where
         Self::DbActionPending(id, idea)
     }
 
-    pub fn convert_to_db_action(&self) -> Option<usize> {
-        if matches!(self, Self::DbActionPending(..)) {
-            return None;
+    pub fn convert_to_db_action(&mut self, id: usize) -> Result<(), ()> {
+        if let Self::InDb(x) = self {
+            *self = Self::DbActionPending(id, x.clone());
+            Ok(())
+        } else {
+            Err(())
         }
-        todo!()
     }
 }

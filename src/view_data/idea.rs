@@ -1,3 +1,4 @@
+use core::panic;
 use futures::FutureExt;
 use sea_orm::{ConnectOptions, Database, DbErr, EntityTrait, QueryOrder};
 use std::sync::Arc;
@@ -121,7 +122,11 @@ impl Idea {
                     |x| matches!(x.0, DbType::InDb(idea::Model {id: model_id, ..}) if id == model_id)
                 )?;
 
-                let action_id = idea.0.convert_to_db_action()?;
+                let Some(counter) = Arc::get_mut(&mut view_data.idea.counter) else {
+                    panic!()
+                };
+                let action_id = counter.next();
+                idea.0.convert_to_db_action(action_id).unwrap();
 
                 Some((
                     action_id,
@@ -140,7 +145,7 @@ impl Idea {
                                 "There is probably a bug, this shouldn't be called with Some"
                             );
                             let Some(pos) = view_data.idea.ideas.iter_mut().position(
-                                |x| matches!(x.0, DbType::InDb(idea::Model {id: model_id, ..}) if id == model_id)
+                                |x| matches!(x.0, DbType::DbActionPending(id, _) if action_id == id)
                             ) else {
                                 return;
                             };
@@ -149,12 +154,14 @@ impl Idea {
                                 view_data.idea.selected = None;
                             }
 
-                            if let Some(ref mut selected) = view_data.idea.selected {
+                            if view_data.idea.ideas.len() == 1 {
+                                view_data.idea.selected = None;
+                            } else if let Some(ref mut selected) = view_data.idea.selected {
                                 if *selected > pos {
                                     *selected -= 1;
                                 }
                                 // Just in case so that some weird behavior doesn't crash it
-                                if *selected == view_data.idea.ideas.len() {
+                                if *selected == view_data.idea.ideas.len() - 1 {
                                     *selected -= 1;
                                 }
                             }
