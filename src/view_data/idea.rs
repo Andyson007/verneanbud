@@ -5,10 +5,14 @@ use std::sync::Arc;
 
 use crate::{
     app::DbActionReturn,
-    entities::{comment, idea, prelude::Comment as eComment, prelude::Idea as eIdea},
+    entities::{
+        comment,
+        idea::{self},
+        prelude::{Comment as eComment, Idea as eIdea},
+    },
 };
 
-use super::{counter::Counter, db_type::DbType, ViewData};
+use super::{counter::Counter, db_type::DbType, search_query::SearchQuery, ViewData};
 
 /// 0: The idea description
 /// 1: The comments on the idea
@@ -18,7 +22,8 @@ type IdeaType = (DbType<idea::Model>, Vec<DbType<comment::Model>>, u16);
 #[derive(Debug)]
 pub struct Idea {
     pub selected: Option<usize>,
-    pub ideas: Vec<IdeaType>,
+    ideas: Vec<IdeaType>,
+    pub search_query: Option<SearchQuery>,
     counter: Arc<Counter>,
 }
 
@@ -38,29 +43,45 @@ impl Idea {
             })
             .collect();
         Ok(Self {
-            selected: None,
             ideas,
             counter,
+            selected: None,
+            search_query: None,
+        })
+    }
+
+    pub fn filtered_ideas(&self) -> impl DoubleEndedIterator<Item = &idea::Model> + Clone {
+        self.ideas.iter().map(|x| x.0.get_entry()).filter(|x| {
+            self.search_query.as_ref().map_or(true, |search_query| {
+                x.title
+                    .to_lowercase()
+                    .starts_with(&search_query.to_string().to_lowercase())
+            })
         })
     }
 
     pub fn up(&mut self) {
-        if self.ideas.is_empty() {
-            self.selected = None;
-        } else {
-            self.selected =
-                Some(self.selected.map_or(self.ideas.len() - 1, |x| x + 1) % self.ideas.len());
-        }
-    }
-
-    pub fn down(&mut self) {
-        if self.ideas.is_empty() {
+        if self.filtered_ideas().next().is_none() {
             self.selected = None;
         } else {
             self.selected = Some(
                 self.selected
-                    .map_or(self.ideas.len() - 1, |x| x + self.ideas.len() - 1)
-                    % self.ideas.len(),
+                    .map_or(self.filtered_ideas().count() - 1, |x| x + 1)
+                    % self.filtered_ideas().count(),
+            );
+        }
+    }
+
+    pub fn down(&mut self) {
+        if self.filtered_ideas().next().is_none() {
+            self.selected = None;
+        } else {
+            self.selected = Some(
+                self.selected
+                    .map_or(self.filtered_ideas().count() - 1, |x| {
+                        (x + self.filtered_ideas().count() - 1) % self.filtered_ideas().count()
+                    })
+                    % self.filtered_ideas().count(),
             );
         }
     }

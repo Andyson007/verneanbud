@@ -4,6 +4,7 @@ use std::sync::Arc;
 mod counter;
 pub mod db_type;
 pub mod idea;
+pub mod search_query;
 
 use counter::Counter;
 use idea::Idea;

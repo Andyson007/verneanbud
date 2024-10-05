@@ -9,7 +9,7 @@ use sea_orm::{ConnectOptions, DbErr};
 use crate::{
     popups::{comment::CommontPopup, idea::IdeaPopup, Action, Popup},
     style::Style,
-    view_data::ViewData,
+    view_data::{search_query::SearchQuery, ViewData},
 };
 
 /// The url of the database. It should be stored:
@@ -74,6 +74,8 @@ impl App<'_> {
     }
 
     /// Handles an input
+    /// true: exit
+    /// false: don't exit
     pub fn handle_input(&mut self, key: KeyEvent) -> bool {
         if let Some(popup) = self.popup.as_mut() {
             let popup_action = popup.handle_input(key);
@@ -93,59 +95,90 @@ impl App<'_> {
 
             return false;
         }
-        if matches!(key.code, KeyCode::Esc | KeyCode::Char('q')) {
-            return true;
-        }
+        if if let Some(search_query) = self.view_data.idea.search_query.as_mut() {
+            if search_query.focused {
+                if search_query.handle_input(key) {
+                    self.view_data.idea.search_query = None;
+                } else {
+                    self.view_data.idea.selected.map(|_| {
+                        let amount = self
+                            .view_data
+                            .idea
+                            .filtered_ideas()
+                            .count();
+                        if amount == 0 {
+                            self.view_data.idea.selected = None;
+                        } else if let Some(ref mut selected) = self.view_data.idea.selected {
+                            *selected = cmp::min(*selected, amount - 1);
+                        };
+                        false
+                    });
+                }
+                false
+            } else {
+                true
+            }
+        } else {
+            true
+        } {
+            match self.view {
+                View::Ideas => match key {
+                    KeyEvent {
+                        code: KeyCode::Char('d'),
+                        modifiers: KeyModifiers::CONTROL,
+                        kind: KeyEventKind::Repeat | KeyEventKind::Press,
+                        state: KeyEventState::NONE,
+                    } => {
+                        if let Some(x) = self.view_data.idea.current_mut() {
+                            x.2 = cmp::min(
+                                x.2 + 3,
+                                u16::try_from(
+                                    x.1.iter()
+                                        .map(|x| x.get_entry().content.lines().count() + 1)
+                                        .sum::<usize>()
+                                        + x.0.get_entry().description.lines().count(),
+                                )
+                                .unwrap(),
+                            );
+                        }
+                    }
+                    KeyEvent {
+                        code: KeyCode::Char('u'),
+                        modifiers: KeyModifiers::CONTROL,
+                        kind: KeyEventKind::Repeat | KeyEventKind::Press,
+                        state: KeyEventState::NONE,
+                    } => {
+                        if let Some(x) = self.view_data.idea.current_mut() {
+                            x.2 = x.2.saturating_sub(3);
+                        }
+                    }
+                    key => match key.code {
+                        KeyCode::Esc | KeyCode::Char('q') => {
+                            return true;
+                        }
+                        KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.down(),
+                        KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.up(),
+                        KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
+                        KeyCode::Char('r') => {
+                            block_on(self.view_data.refresh(&self.conn_opts)).unwrap();
+                        }
+                        KeyCode::Char('d') => self.delete_idea(),
+                        KeyCode::Char('c') => {
+                            if self.view_data.idea.selected.is_some() {
+                                self.popup = Some(Box::new(CommontPopup::default()));
+                            }
+                        }
+                        KeyCode::Char('/') => {
+                            self.view_data.idea.search_query = Some(SearchQuery::new());
+                        }
 
-        match self.view {
-            View::Ideas => match key {
-                KeyEvent {
-                    code: KeyCode::Char('d'),
-                    modifiers: KeyModifiers::CONTROL,
-                    kind: KeyEventKind::Repeat | KeyEventKind::Press,
-                    state: KeyEventState::NONE,
-                } => {
-                    if let Some(x) = self.view_data.idea.current_mut() {
-                        x.2 = cmp::min(
-                            x.2 + 3,
-                            u16::try_from(
-                                x.1.iter()
-                                    .map(|x| x.get_entry().content.lines().count() + 1)
-                                    .sum::<usize>()
-                                    + x.0.get_entry().description.lines().count(),
-                            )
-                            .unwrap(),
-                        );
-                    }
-                }
-                KeyEvent {
-                    code: KeyCode::Char('u'),
-                    modifiers: KeyModifiers::CONTROL,
-                    kind: KeyEventKind::Repeat | KeyEventKind::Press,
-                    state: KeyEventState::NONE,
-                } => {
-                    if let Some(x) = self.view_data.idea.current_mut() {
-                        x.2 = x.2.saturating_sub(3);
-                    }
-                }
-                key => match key.code {
-                    KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.down(),
-                    KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.up(),
-                    KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
-                    KeyCode::Char('r') => {
-                        block_on(self.view_data.refresh(&self.conn_opts)).unwrap();
-                    }
-                    KeyCode::Char('d') => self.delete_idea(),
-                    KeyCode::Char('c') => self.popup = Some(Box::new(CommontPopup::default())),
-                    KeyCode::Char(' ') => {
-                        todo!("Toggle state")
-                    }
-                    KeyCode::Char('e') => {
-                        todo!("Edit something")
-                    }
-                    _ => (),
+                        KeyCode::Char('e') => {
+                            todo!("Edit something")
+                        }
+                        _ => (),
+                    },
                 },
-            },
+            }
         }
         false
     }

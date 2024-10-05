@@ -8,10 +8,23 @@ use ratatui::{
 
 use ratatui::prelude::*;
 
-use crate::{app::App, entities::sea_orm_active_enums::Issuekind, view_data::db_type::DbType};
+use crate::{
+    app::App,
+    entities::sea_orm_active_enums::Issuekind,
+    view_data::{db_type::DbType, search_query::SearchQuery},
+};
 
 pub fn render(app: &App, frame: &mut Frame, mainview: Rect, infoview: Rect) {
-    render_select(app, frame, mainview);
+    if let Some(ref search_query) = app.view_data.idea.search_query {
+        let main_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Fill(1), Constraint::Length(1)])
+            .split(mainview);
+        render_select(app, frame, main_layout[0]);
+        render_search(search_query, frame, main_layout[1]);
+    } else {
+        render_select(app, frame, mainview);
+    }
     render_infoview(app, frame, infoview);
 }
 
@@ -59,38 +72,20 @@ fn render_infoview(app: &App, frame: &mut Frame, view: Rect) {
 }
 
 fn render_select(app: &App, frame: &mut Frame, view: Rect) {
+    let ideas = app.view_data.idea.filtered_ideas();
     let mut list_state = ListState::default().with_selected(
         app.view_data
             .idea
             .selected
-            .map(|x| app.view_data.idea.ideas.len() - x - 1),
+            .map(|x| ideas.clone().count() - x - 1),
     );
-    let max_title_len = app
-        .view_data
-        .idea
-        .ideas
-        .iter()
-        .map(|x| x.0.get_entry())
-        .map(|x| x.title.len())
-        .max()
-        .unwrap_or(0);
+    let max_title_len = ideas.clone().map(|x| x.title.len()).max().unwrap_or(0);
 
-    let max_author_len = app
-        .view_data
-        .idea
-        .ideas
-        .iter()
-        .map(|x| x.0.get_entry())
-        .map(|x| x.author.len())
-        .max()
-        .unwrap_or(0);
+    let max_author_len = ideas.clone().map(|x| x.author.len()).max().unwrap_or(0);
 
     let list = List::new(
-        app.view_data
-            .idea
-            .ideas
-            .iter()
-            .map(|x| x.0.get_entry())
+        ideas
+            .clone()
             .map(|idea| {
                 let title = &idea.title;
                 let kind = kind_str(&idea.kind).to_string();
@@ -121,6 +116,10 @@ fn render_select(app: &App, frame: &mut Frame, view: Rect) {
     .highlight_style(Style::new().add_modifier(Modifier::REVERSED));
 
     frame.render_stateful_widget(list, view, &mut list_state);
+}
+
+fn render_search(search_query: &SearchQuery, frame: &mut Frame, view: Rect) {
+    frame.render_widget(Span::raw(format!("/{}", search_query.to_string())), view);
 }
 
 const fn kind_str(kind: &Issuekind) -> &str {
