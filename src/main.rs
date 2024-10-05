@@ -13,32 +13,17 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
+
+type Backend = CrosstermBackend<io::Stdout>;
 
 fn main() -> color_eyre::Result<()> {
-    // setup terminal
-    errors::install_hooks()?;
-    enable_raw_mode()?;
-    let mut stderr = io::stderr(); // This is a special case. Normally using stdout is fine
-    execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stderr);
-    let mut terminal = Terminal::new(backend)?;
-
+    let mut terminal = setup_terminal()?;
     // create app and run it
     let mut app = block_on(App::new())?;
     let res = run_app(&mut terminal, &mut app);
 
-    // restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    restore_terminal(&mut terminal)?;
 
     if let Ok(_do_print) = res {
     } else if let Err(err) = res {
@@ -48,10 +33,28 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn run_app<B>(terminal: &mut Terminal<B>, app: &mut App) -> color_eyre::Result<()>
-where
-    B: Backend,
-{
+fn setup_terminal() -> color_eyre::Result<Terminal<Backend>> {
+    errors::install_hooks()?;
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    Ok(Terminal::new(backend)?)
+}
+
+fn restore_terminal(terminal: &mut Terminal<Backend>) -> color_eyre::Result<()> {
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    Ok(())
+}
+
+fn run_app(terminal: &mut Terminal<Backend>, app: &mut App) -> color_eyre::Result<()> {
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -67,7 +70,8 @@ where
                     ..
                 }
             ) {
-                return Ok(());
+                restore_terminal(terminal)?;
+                std::process::exit(130);
             }
             if app.handle_input(key) {
                 return Ok(());
