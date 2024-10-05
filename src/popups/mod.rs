@@ -13,7 +13,7 @@ pub trait Popup: fmt::Debug {
     /// Renders te popup onto the frame
     fn render(&self, style: Style, area: Rect, buffer: &mut Frame);
     /// Handles any imput sent to the popup
-    fn handle_input<'a>(&mut self, key: KeyEvent) -> Action<'a>;
+    fn handle_input<'a>(&mut self, key: &KeyEvent) -> Action<'a>;
 }
 
 /// What action should be taken when `handle_input` finishes running

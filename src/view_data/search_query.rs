@@ -22,7 +22,7 @@ impl Default for SearchQuery {
 }
 
 impl SearchQuery {
-    pub fn handle_input(&mut self, key: KeyEvent) -> bool {
+    pub fn handle_input(&mut self, key: &KeyEvent) -> bool {
         match key {
             KeyEvent {
                 code: KeyCode::Char('w'),

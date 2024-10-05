@@ -62,7 +62,7 @@ impl Popup for CommontPopup {
         frame.render_widget(para, layout[1]);
     }
 
-    fn handle_input<'a>(&mut self, key: crossterm::event::KeyEvent) -> Action<'a> {
+    fn handle_input<'a>(&mut self, key: &crossterm::event::KeyEvent) -> Action<'a> {
         match key {
             KeyEvent {
                 code: KeyCode::Char('w'),

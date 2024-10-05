@@ -37,19 +37,6 @@ pub struct App<'a> {
     db_actions: HashMap<usize, (DbAction<'a>, DbActionCallback)>,
 }
 
-impl std::fmt::Debug for App<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("App")
-            .field("view", &self.view)
-            .field("view_data", &self.view_data)
-            .field("popup", &self.popup)
-            .field("conn_opts", &self.conn_opts)
-            .field("style", &self.style)
-            .field("db_actions", &self.db_actions.len())
-            .finish()
-    }
-}
-
 impl App<'_> {
     #[allow(clippy::missing_errors_doc)]
     /// Creates an app
@@ -77,116 +64,95 @@ impl App<'_> {
     /// true: exit
     /// false: don't exit
     pub fn handle_input(&mut self, key: KeyEvent) -> bool {
-        if matches!(
-            key,
-            KeyEvent {
-                code: KeyCode::Char('c'),
-                modifiers: KeyModifiers::CONTROL,
-                ..
-            }
-        ) {
-            return true;
-        }
-        if let Some(popup) = self.popup.as_mut() {
-            let popup_action = popup.handle_input(key);
-            let should_close = popup_action.close_popup();
-
-            if let Action::Db(db_action) = popup_action {
-                if let Some((id, (future, callback))) =
-                    db_action(&mut self.view_data, self.conn_opts.clone())
-                {
-                    self.db_actions.insert(id, (future, callback));
-                };
-            }
-
-            if should_close {
-                self.popup = None;
-            };
-
+        if self.handle_popup(&key) {
             return false;
         }
-        if if let Some(search_query) = self.view_data.idea.search_query.as_mut() {
-            if search_query.focused {
-                if search_query.handle_input(key) {
-                    self.view_data.idea.search_query = None;
-                } else {
-                    self.view_data.idea.selected.map(|_| {
-                        let amount = self.view_data.idea.filtered_ideas().count();
-                        if amount == 0 {
-                            self.view_data.idea.selected = None;
-                        } else if let Some(ref mut selected) = self.view_data.idea.selected {
-                            *selected = cmp::min(*selected, amount - 1);
-                        };
-                        false
-                    });
-                }
-                false
-            } else {
-                true
-            }
-        } else {
-            true
-        } {
-            match self.view {
-                View::Ideas => match key {
-                    KeyEvent {
-                        code: KeyCode::Char('d'),
-                        modifiers: KeyModifiers::CONTROL,
-                        kind: KeyEventKind::Repeat | KeyEventKind::Press,
-                        state: KeyEventState::NONE,
-                    } => {
-                        if let Some(x) = self.view_data.idea.current_mut() {
-                            x.2 = cmp::min(
-                                x.2 + 3,
-                                u16::try_from(
-                                    x.1.iter()
-                                        .map(|x| x.get_entry().content.lines().count() + 1)
-                                        .sum::<usize>()
-                                        + x.0.get_entry().description.lines().count(),
-                                )
-                                .unwrap(),
-                            );
-                        }
-                    }
-                    KeyEvent {
-                        code: KeyCode::Char('u'),
-                        modifiers: KeyModifiers::CONTROL,
-                        kind: KeyEventKind::Repeat | KeyEventKind::Press,
-                        state: KeyEventState::NONE,
-                    } => {
-                        if let Some(x) = self.view_data.idea.current_mut() {
-                            x.2 = x.2.saturating_sub(3);
-                        }
-                    }
-                    key => match key.code {
-                        KeyCode::Esc | KeyCode::Char('q') => {
-                            return true;
-                        }
-                        KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.down(),
-                        KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.up(),
-                        KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
-                        KeyCode::Char('r') => {
-                            block_on(self.view_data.refresh(&self.conn_opts)).unwrap();
-                        }
-                        KeyCode::Char('d') => self.delete_idea(),
-                        KeyCode::Char('c') => {
-                            if self.view_data.idea.selected.is_some() {
-                                self.popup = Some(Box::new(CommontPopup::default()));
-                            }
-                        }
-                        KeyCode::Char('/') => {
-                            self.view_data.idea.search_query = Some(SearchQuery::new());
-                        }
 
-                        KeyCode::Char('e') => {
-                            todo!("Edit something")
+        if self.view_data.idea.handle_search(&key) {
+            return false;
+        };
+
+        match self.view {
+            View::Ideas => match key {
+                KeyEvent {
+                    code: KeyCode::Char('d'),
+                    modifiers: KeyModifiers::CONTROL,
+                    kind: KeyEventKind::Repeat | KeyEventKind::Press,
+                    state: KeyEventState::NONE,
+                } => {
+                    if let Some(x) = self.view_data.idea.current_mut() {
+                        x.2 = cmp::min(
+                            x.2 + 3,
+                            u16::try_from(
+                                x.1.iter()
+                                    .map(|x| x.get_entry().content.lines().count() + 1)
+                                    .sum::<usize>()
+                                    + x.0.get_entry().description.lines().count(),
+                            )
+                            .unwrap(),
+                        );
+                    }
+                }
+                KeyEvent {
+                    code: KeyCode::Char('u'),
+                    modifiers: KeyModifiers::CONTROL,
+                    kind: KeyEventKind::Repeat | KeyEventKind::Press,
+                    state: KeyEventState::NONE,
+                } => {
+                    if let Some(x) = self.view_data.idea.current_mut() {
+                        x.2 = x.2.saturating_sub(3);
+                    }
+                }
+                key => match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') => {
+                        return true;
+                    }
+                    KeyCode::Char('j') | KeyCode::Up => self.view_data.idea.down(),
+                    KeyCode::Char('k') | KeyCode::Down => self.view_data.idea.up(),
+                    KeyCode::Char('n') => self.popup = Some(Box::new(IdeaPopup::default())),
+                    KeyCode::Char('r') => {
+                        block_on(self.view_data.refresh(&self.conn_opts)).unwrap();
+                    }
+                    KeyCode::Char('d') => self.delete_idea(),
+                    KeyCode::Char('c') => {
+                        if self.view_data.idea.selected.is_some() {
+                            self.popup = Some(Box::new(CommontPopup::default()));
                         }
-                        _ => (),
-                    },
+                    }
+                    KeyCode::Char('/') => {
+                        self.view_data.idea.search_query = Some(SearchQuery::new());
+                    }
+
+                    KeyCode::Char('e') => {
+                        todo!("Edit something")
+                    }
+                    _ => (),
                 },
-            }
+            },
         }
+
         false
+    }
+
+    fn handle_popup(&mut self, key: &KeyEvent) -> bool {
+        let Some(ref mut popup) = self.popup else {
+            return false;
+        };
+        let popup_action = popup.handle_input(key);
+        let should_close = popup_action.close_popup();
+
+        if let Action::Db(db_action) = popup_action {
+            if let Some((id, (future, callback))) =
+                db_action(&mut self.view_data, self.conn_opts.clone())
+            {
+                self.db_actions.insert(id, (future, callback));
+            };
+        }
+
+        if should_close {
+            self.popup = None;
+        };
+        true
     }
 
     fn delete_idea(&mut self) {

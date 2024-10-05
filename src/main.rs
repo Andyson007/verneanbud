@@ -6,7 +6,9 @@ use std::io;
 use verneanbud::{app::App, errors, ui::ui};
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -55,8 +57,17 @@ where
 
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Release {
-                // Skip events that are not KeyEventKind::Press
                 continue;
+            }
+            if matches!(
+                key,
+                KeyEvent {
+                    code: KeyCode::Char('c'),
+                    modifiers: KeyModifiers::CONTROL,
+                    ..
+                }
+            ) {
+                return Ok(());
             }
             if app.handle_input(key) {
                 return Ok(());

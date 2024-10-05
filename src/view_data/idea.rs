@@ -1,7 +1,8 @@
 use core::panic;
+use crossterm::event::KeyEvent;
 use futures::FutureExt;
 use sea_orm::{ColumnTrait, ConnectOptions, Database, DbErr, EntityTrait, QueryFilter, QueryOrder};
-use std::sync::Arc;
+use std::{cmp, sync::Arc};
 
 use crate::{
     app::DbActionReturn,
@@ -196,6 +197,31 @@ impl Idea {
                 ))
             },
         ))
+    }
+
+    pub fn handle_search(&mut self, key: &KeyEvent) -> bool {
+        let Some(search_query) = self.search_query.as_mut() else {
+            return false;
+        };
+        if !search_query.focused {
+            return false;
+        }
+        if search_query.handle_input(key) {
+            self.search_query = None;
+            return true;
+        }
+
+        self.selected.map(|_| {
+            let amount = self.filtered_ideas().count();
+            if amount == 0 {
+                self.selected = None;
+            } else if let Some(ref mut selected) = self.selected {
+                *selected = cmp::min(*selected, amount - 1);
+            };
+            false
+        });
+
+        false
     }
 
     pub fn current(&self) -> Option<&IdeaType> {
