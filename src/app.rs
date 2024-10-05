@@ -77,6 +77,16 @@ impl App<'_> {
     /// true: exit
     /// false: don't exit
     pub fn handle_input(&mut self, key: KeyEvent) -> bool {
+        if matches!(
+            key,
+            KeyEvent {
+                code: KeyCode::Char('c'),
+                modifiers: KeyModifiers::CONTROL,
+                ..
+            }
+        ) {
+            return true;
+        }
         if let Some(popup) = self.popup.as_mut() {
             let popup_action = popup.handle_input(key);
             let should_close = popup_action.close_popup();
@@ -101,11 +111,7 @@ impl App<'_> {
                     self.view_data.idea.search_query = None;
                 } else {
                     self.view_data.idea.selected.map(|_| {
-                        let amount = self
-                            .view_data
-                            .idea
-                            .filtered_ideas()
-                            .count();
+                        let amount = self.view_data.idea.filtered_ideas().count();
                         if amount == 0 {
                             self.view_data.idea.selected = None;
                         } else if let Some(ref mut selected) = self.view_data.idea.selected {
