@@ -124,24 +124,6 @@ impl Idea {
     }
 
     /// Converts a pendic Db-action to to a DB element by id
-    pub fn inserted(&mut self, id: usize, new_id: i32) -> Result<(), ()> {
-        match self
-            .ideas
-            .iter_mut()
-            .find(|x| matches!(x.0, DbType::DbActionPending(dbid, _) if dbid == id))
-        {
-            None => return Err(()),
-            Some(x) => {
-                x.0.get_entry_mut().id = new_id;
-                x
-            }
-        }
-        .0
-        .convert_to_db();
-        Ok(())
-    }
-
-    /// Converts a pendic Db-action to to a DB element by id
     pub fn completed<C>(&mut self, id: usize, callback: C) -> Result<(), ()>
     where
         C: FnOnce(&mut IdeaType),

@@ -137,12 +137,11 @@ impl Popup for IdeaPopup {
                                     .boxed(),
                                     Box::new(
                                         move |view_data: &mut ViewData, new_id: Option<i32>| {
-                                            let _ = view_data.idea.inserted(
-                                                id,
-                                                new_id.expect(
-                                                    "This callback can't be called with none",
-                                                ),
-                                            );
+                                            let _ = view_data.idea.completed(id, |x| {
+                                                x.0.get_entry_mut().id = new_id.expect(
+                                                    "This method cannot be called with None",
+                                                );
+                                            });
                                         },
                                     ),
                                 ),
