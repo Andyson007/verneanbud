@@ -7,6 +7,7 @@ use crate::{app::DbActionReturn, style::Style};
 
 pub mod idea;
 pub mod comment;
+pub mod edit;
 
 /// A trait describing a popup. This is used for storing the popup more easily in `App`
 pub trait Popup: fmt::Debug {

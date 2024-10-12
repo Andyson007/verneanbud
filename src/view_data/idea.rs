@@ -18,7 +18,7 @@ use super::{counter::Counter, db_type::DbType, search_query::SearchQuery, ViewDa
 /// 0: The idea description
 /// 1: The comments on the idea
 /// 2: Scroll distance
-type IdeaType = (DbType<idea::Model>, Vec<DbType<comment::Model>>, u16);
+pub type IdeaType = (DbType<idea::Model>, Vec<DbType<comment::Model>>, u16);
 
 #[derive(Debug)]
 pub struct Idea {
@@ -87,6 +87,21 @@ impl Idea {
         }
     }
 
+    pub fn edit_idea(&mut self, idea: &idea::Model) -> Option<usize> {
+        let Some(counter) = Arc::get_mut(&mut self.counter) else {
+            panic!("I don't even know how.")
+        };
+
+        let entry = self
+            .ideas
+            .iter_mut()
+            .find(|x| x.0.get_entry().id == idea.id)?;
+        if entry.0.convert_to_db_action(counter.next()).is_err() {
+            return None;
+        }
+        Some(self.counter.get())
+    }
+
     pub fn new_idea(&mut self, idea: idea::Model) -> usize {
         let Some(counter) = Arc::get_mut(&mut self.counter) else {
             panic!("I don't even know how.")
@@ -123,6 +138,24 @@ impl Idea {
         }
         .0
         .convert_to_db();
+        Ok(())
+    }
+
+    /// Converts a pendic Db-action to to a DB element by id
+    pub fn completed<C>(&mut self, id: usize, callback: C) -> Result<(), ()>
+    where
+        C: FnOnce(&mut IdeaType),
+    {
+        let Some(x) = self
+            .ideas
+            .iter_mut()
+            .find(|x| matches!(x.0, DbType::DbActionPending(dbid, _) if dbid == id))
+        else {
+            return Err(());
+        };
+        callback(x);
+        x.0.convert_to_db();
+
         Ok(())
     }
 

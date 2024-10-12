@@ -7,7 +7,7 @@ use futures::{executor::block_on, Future};
 use sea_orm::{ConnectOptions, DbErr};
 
 use crate::{
-    popups::{comment::CommontPopup, idea::IdeaPopup, Action, Popup},
+    popups::{comment::CommontPopup, edit::EditPopup, idea::IdeaPopup, Action, Popup},
     style::Style,
     view_data::{search_query::SearchQuery, ViewData},
 };
@@ -124,7 +124,9 @@ impl App<'_> {
                     }
 
                     KeyCode::Char('e') => {
-                        todo!("Edit something")
+                        if let Some(x) = self.view_data.idea.current() {
+                            self.popup = Some(Box::new(EditPopup::new(x)));
+                        }
                     }
                     _ => (),
                 },
